@@ -245,7 +245,7 @@ def test_data_sources_endpoint():
         assert s.name
         assert s.category
         assert s.status
-        assert s.data_type in ["synthetic", "simulated", "estimated", "observed"]
+        assert s.data_type in ["synthetic", "simulated", "estimated", "observed", "modelled"]
 
     print("  [PASS] GET /api/data-sources/status -> Complete provenance & data reliability catalog")
 
