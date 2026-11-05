@@ -1,0 +1,75 @@
+{
+  "project": "UrbanVerse",
+  "area": "Pumpwell, Mangaluru, Karnataka, India",
+  "data_retrieved": "2026-11-06",
+  "coordinate_reference_system": {
+    "name": "WGS 84",
+    "epsg": "EPSG:4326",
+    "format": "GeoJSON longitude, latitude"
+  },
+  "study_boundary": {
+    "type": "Approximate circular study area",
+    "center_latitude": 12.8642,
+    "center_longitude": 74.8694,
+    "radius_metres": 500,
+    "source": "Project-defined boundary, not an official municipal boundary"
+  },
+  "data_source": {
+    "name": "OpenStreetMap",
+    "retrieval_method": "Overpass Turbo",
+    "website": "https://www.openstreetmap.org/",
+    "attribution": "\u00a9 OpenStreetMap contributors",
+    "licence": "Open Database Licence (ODbL)"
+  },
+  "layers": {
+    "boundary.geojson": {
+      "geometry": "Polygon",
+      "features": 1,
+      "source": "Project-defined approximate boundary"
+    },
+    "buildings.geojson": {
+      "geometry": "Polygon",
+      "features": 22,
+      "source": "OpenStreetMap"
+    },
+    "roads.geojson": {
+      "geometry": "LineString",
+      "features": 78,
+      "source": "OpenStreetMap"
+    },
+    "waterways.geojson": {
+      "geometry": "Mixed; verify individual geometries",
+      "features": 5,
+      "source": "OpenStreetMap"
+    },
+    "elevation.tif": {
+      "format": "GeoTIFF",
+      "geometry": "Raster",
+      "dimensions": "34 x 33 pixels",
+      "crs": "EPSG:4326",
+      "resolution": "Approximately 30 metres",
+      "valid_pixels": 842,
+      "minimum_elevation_metres": 5.3448,
+      "maximum_elevation_metres": 39.9168,
+      "mean_elevation_metres": 17.361,
+      "source_tile": "elevation_source.tif",
+      "source_product": "Verify exact DEM product and version from download portal",
+      "limitations": "Coarse-resolution surface elevation; not suitable for street-level drainage modelling."
+    }
+  },
+  "limitations": [
+    "OpenStreetMap coverage may be incomplete.",
+    "Mapped buildings may not represent every building in the study area.",
+    "Mapped roads may not represent every road or path.",
+    "Mapped drains and culverts do not represent a complete official drainage network.",
+    "The study boundary is approximate and is not an official surveyed boundary.",
+    "Elevation data has not yet been added.",
+    "These datasets are not an official municipal survey.",
+    "Elevation raster has approximately 30-metre resolution and may not capture local road gradients or drainage details."
+  ],
+  "usage": [
+    "GIS visualization",
+    "2D and 3D map integration",
+    "Geographical reference for flood simulation"
+  ]
+}
