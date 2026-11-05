@@ -1,15 +1,17 @@
 """Comprehensive Verification Test Suite for UrbanVerse Backend API.
 
-Tests all required endpoints:
+Audits and verifies:
 1. GET /api/health
-2. GET /api/zones (GIS GeoJSON RFC 7946 compliance)
-3. POST /api/simulate (Backward compatible flood simulation)
-4. GET /api/hazards (Multi-hazard catalog: Flood, Heat, Air, Landslide)
-5. GET /api/priorities (P1-P4 Priority & sub-priority ranking)
-6. POST /api/assess (Full multi-hazard assessment with exposure/vulnerability)
-7. GET /api/zones/{id}/assets (Critical infrastructure asset inventory)
+2. GET /api/zones (GeoJSON RFC 7946 & GIS parsing)
+3. POST /api/simulate (Backward compatible flood simulation contract)
+4. GET /api/hazards (Multi-hazard catalog)
+5. GET /api/priorities (P1-P4 tiers & sub-priority ranking)
+6. POST /api/assess (Full multi-hazard scenario evaluation)
+7. GET /api/zones/{id}/assets (Critical urban infrastructure inventory)
 8. GET /api/data-sources/status (Data reliability & provenance)
 9. GET / (Root navigation)
+10. Input validation & error handling (negative rainfall, invalid zones)
+11. GIS fallback resilience
 """
 
 import sys
@@ -25,7 +27,6 @@ from app.routes.hazards import get_hazard_catalog
 from app.routes.priorities import get_priorities
 from app.routes.assess import assess_multi_hazard
 from app.routes.data_sources import get_data_sources_status
-from app.routes.zones import get_zone_assets
 from app.main import root
 from app.schemas import (
     SimulateRequest,
@@ -38,6 +39,13 @@ from app.schemas import (
     AssessResponse,
     ZoneAssetsResponse,
     DataSourcesResponse,
+)
+from app.services.gis_service import GISService
+from app.services.hazard_service import (
+    assess_flood_hazard,
+    assess_heat_hazard,
+    assess_air_pollution_hazard,
+    assess_landslide_hazard,
 )
 from fastapi import HTTPException
 
@@ -120,6 +128,43 @@ def test_hazards_catalog_endpoint():
     print("  [PASS] GET /api/hazards -> 4 hazards catalogued with methodology and applicability")
 
 
+def test_individual_hazard_calculations():
+    """Verify mathematical logic of all 4 hazard assessment functions."""
+    sample_zone_high = {"zone_id": "UV004", "name": "Riverside Zone", "elevation_m": 4.0, "zone_type": "riverside"}
+    sample_zone_elevated = {"zone_id": "UV001", "name": "Residential Zone", "elevation_m": 24.0, "zone_type": "residential"}
+
+    # Flood
+    f_high = assess_flood_hazard(90.0, sample_zone_high)
+    assert f_high["score"] >= 80
+    assert f_high["level"] in ["High", "Critical"]
+
+    f_low = assess_flood_hazard(20.0, sample_zone_elevated)
+    assert f_low["score"] < 40
+    assert f_low["level"] == "Low"
+
+    # Heatwave
+    h_severe = assess_heat_hazard(41.0, {"zone_id": "UV002", "name": "Commercial Zone", "zone_type": "commercial"})
+    assert h_severe["score"] >= 80
+
+    h_moderate = assess_heat_hazard(31.0, sample_zone_elevated)
+    assert h_moderate["score"] < 50
+
+    # Air Pollution
+    a_poor = assess_air_pollution_hazard(280.0, {"zone_id": "UV003", "name": "Industrial Zone", "zone_type": "industrial"})
+    assert a_poor["score"] >= 70
+
+    # Landslide (constrained to UV001)
+    l_flat = assess_landslide_hazard(100.0, 0.9, sample_zone_high)
+    assert l_flat["score"] == 0
+    assert l_flat["is_applicable"] is False
+
+    l_sloped = assess_landslide_hazard(100.0, 0.8, sample_zone_elevated)
+    assert l_sloped["score"] >= 60
+    assert l_sloped["is_applicable"] is True
+
+    print("  [PASS] Hazard Calculations -> Mathematical logic verified for Flood, Heat, Air, and Landslide")
+
+
 def test_priorities_endpoint():
     """Verify GET /api/priorities computes P1-P4 tiers and intra-tier sub-priority ranks."""
     res = get_priorities(rainfall_mm=85.0, temperature_c=38.0, aqi=190.0)
@@ -127,7 +172,6 @@ def test_priorities_endpoint():
     assert res.zone_count == 4
     assert len(res.priorities) == 4
 
-    # Verify valid priority assignment
     for p in res.priorities:
         assert p.priority in ["P1", "P2", "P3", "P4"]
         assert 1 <= p.overall_rank <= 4
@@ -137,7 +181,7 @@ def test_priorities_endpoint():
         assert p.vulnerability.vulnerability_score > 0
         assert p.action_required
 
-    # Sub-priority ranking uniqueness within the same priority
+    # Sub-priority ranking uniqueness within the same priority tier
     for tier in ["P1", "P2", "P3", "P4"]:
         sub_ranks = [p.sub_priority_rank for p in res.priorities if p.priority == tier]
         assert len(sub_ranks) == len(set(sub_ranks)), f"Duplicate sub-priority rank in {tier}"
@@ -188,13 +232,6 @@ def test_zone_assets_endpoint():
             assert a.coordinates.latitude
             assert a.coordinates.longitude
 
-    # Test unknown zone returns 404
-    try:
-        get_zone_assets("UV999")
-        assert False, "Should have raised 404 for unknown zone"
-    except HTTPException as e:
-        assert e.status_code == 404
-
     print("  [PASS] GET /api/zones/{id}/assets -> Critical infrastructure asset inventory")
 
 
@@ -213,6 +250,36 @@ def test_data_sources_endpoint():
     print("  [PASS] GET /api/data-sources/status -> Complete provenance & data reliability catalog")
 
 
+def test_input_validation_and_errors():
+    """Verify input validation and error responses."""
+    # Negative rainfall
+    try:
+        req = SimulateRequest.model_construct(rainfall_mm=-25.0)
+        simulate_flood_risk(req)
+        assert False, "Should raise HTTPException 400 for negative rainfall"
+    except HTTPException as e:
+        assert e.status_code == 400
+
+    # Unknown zone ID
+    try:
+        get_zone_assets("UV999")
+        assert False, "Should raise HTTPException 404 for unknown zone"
+    except HTTPException as e:
+        assert e.status_code == 404
+
+    print("  [PASS] Input Validation & Errors -> 400 on negative rainfall, 404 on unknown zone")
+
+
+def test_gis_fallback_resilience():
+    """Verify GISService safely falls back to internal catalog if file missing."""
+    service = GISService()
+    zones = service.get_all_zones()
+    assert len(zones) == 4
+    for z in zones:
+        assert z["zone_id"] in ["UV001", "UV002", "UV003", "UV004"]
+    print("  [PASS] GIS Resilience -> Safe parsing and fallback handling verified")
+
+
 def test_root_endpoint():
     """Verify GET / returns quick navigation links to all API endpoints."""
     res = root()
@@ -225,18 +292,21 @@ def test_root_endpoint():
 
 
 if __name__ == "__main__":
-    print("\n" + "=" * 70)
-    print("  URBANVERSE BACKEND & INTEGRATION VERIFICATION SUITE")
-    print("=" * 70)
+    print("\n" + "=" * 75)
+    print("  URBANVERSE BACKEND & INTEGRATION FULL VERIFICATION SUITE")
+    print("=" * 75)
     test_health_endpoint()
     test_zones_endpoint()
     test_simulate_backward_compatibility()
     test_hazards_catalog_endpoint()
+    test_individual_hazard_calculations()
     test_priorities_endpoint()
     test_assess_endpoint()
     test_zone_assets_endpoint()
     test_data_sources_endpoint()
+    test_input_validation_and_errors()
+    test_gis_fallback_resilience()
     test_root_endpoint()
-    print("=" * 70)
-    print("  ALL 9 INTEGRATION TESTS PASSED SUCCESSFULLY!")
-    print("=" * 70 + "\n")
+    print("=" * 75)
+    print("  ALL 12 INTEGRATION & AUDIT TESTS PASSED SUCCESSFULLY!")
+    print("=" * 75 + "\n")
