@@ -443,6 +443,51 @@
       stMarker.on("click", () => flyToLocation("surathkal"));
     }
 
+    let buildingLayers = [];
+
+    // Ingest and render real OpenStreetMap building footprints
+    async function loadRealBuildings(area) {
+      buildingLayers.forEach(l => map.removeLayer(l));
+      buildingLayers = [];
+
+      try {
+        const res = await fetch(`${API_BASE}/api/buildings/${area}`);
+        if (!res.ok) return;
+        const data = await res.json();
+
+        data.features.forEach(feat => {
+          if (!feat.geometry || feat.geometry.type !== "Polygon") return;
+          const coords = feat.geometry.coordinates[0];
+          const latLngs = coords.map(c => [c[1], c[0]]);
+
+          const bType = feat.properties.building || "structure";
+          const levels = feat.properties["building:levels"] || "1";
+          const height = feat.properties.height ? `${feat.properties.height}m` : `${levels * 3.2}m`;
+          const isHospital = bType.toLowerCase().includes("hospital");
+
+          const color = isHospital ? "#EF4444" : (bType === "apartments" ? "#38BDF8" : "#A855F7");
+
+          const poly = L.polygon(latLngs, {
+            color: color,
+            weight: isHospital ? 2.5 : 1.5,
+            fillColor: color,
+            fillOpacity: isHospital ? 0.75 : 0.55
+          }).addTo(map);
+
+          poly.bindTooltip(`<strong>${isHospital ? '🏥 ' : '🏢 '}Real OSM ${bType.toUpperCase()}</strong><br>Levels: ${levels} (Height: ${height})<br><span class="text-cyan-400 font-mono text-[10px]">OSM ID: ${feat.id || 'N/A'}</span>`, {
+            sticky: true,
+            className: "bg-slate-900 text-slate-100 text-xs border border-cyan-500/50 p-2 rounded shadow-xl"
+          });
+
+          buildingLayers.push(poly);
+        });
+
+        showToast("OpenStreetMap Buildings Ingested", `Loaded ${data.features.length} real buildings for ${area}.`);
+      } catch (err) {
+        console.warn("Could not load real OSM buildings for", area, err);
+      }
+    }
+
     // Smooth camera navigation to Mangalore hotspots
     function flyToLocation(key) {
       const loc = HOTSPOTS[key];
@@ -469,6 +514,14 @@
       badge.classList.remove("hidden");
       badge.innerText = key === 'pumpwell' ? "P1 Critical Bottleneck" : (key === 'nanthoor' ? "Evacuation Ridge" : (key === 'surathkal' ? "Coastal Sector" : "Pilot 4-Zones"));
       badge.style.backgroundColor = loc.color || "#0284c7";
+
+      if (key !== 'pilot') {
+        loadRealBuildings(key);
+      } else {
+        // Clear building layers if returning to pilot area
+        buildingLayers.forEach(l => map.removeLayer(l));
+        buildingLayers = [];
+      }
 
       if (key === 'pumpwell') {
         list.innerHTML = `

@@ -1,3 +1,5 @@
+import os
+import json
 from fastapi import APIRouter, HTTPException
 from app.schemas import ZonesResponse, ZoneDetail, ZoneCoordinates, ZoneAssetsResponse, AssetDetail
 from app.services.gis_service import gis_service
@@ -69,3 +71,22 @@ def get_zone_assets(zone_id: str) -> ZoneAssetsResponse:
         assets=assets_parsed,
         simulation_only=True,
     )
+
+
+DATA_DIR = os.path.abspath(os.path.join(os.path.dirname(__file__), "..", "..", "..", "data"))
+
+
+@router.get("/buildings/{area}", tags=["GIS & Zones"])
+def get_area_buildings(area: str):
+    """Return real-world OpenStreetMap building footprints for a specific hotspot (pumpwell, nanthoor, surathkal)."""
+    area_clean = area.lower().strip()
+    if area_clean not in ["pumpwell", "nanthoor", "surathkal"]:
+        raise HTTPException(status_code=404, detail=f"Hotspot area '{area}' not found. Supported: pumpwell, nanthoor, surathkal.")
+
+    file_path = os.path.join(DATA_DIR, area_clean, "buildings.geojson")
+    if not os.path.exists(file_path):
+        raise HTTPException(status_code=404, detail=f"Building layer for '{area}' not found on disk.")
+
+    with open(file_path, "r", encoding="utf-8") as f:
+        return json.load(f)
+
