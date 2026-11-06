@@ -1,14 +1,26 @@
 {
   "name": "urbanverse-frontend",
   "version": "1.0.0",
-  "description": "UrbanVerse AI Urban Digital Twin Frontend (2D GIS + 3D Simulation)",
-  "main": "index.html",
+  "type": "module",
+  "description": "UrbanVerse Member 2: Frontend + 3D Digital Twin for Mangalore Pilot Flood Risk",
+  "main": "server.js",
   "scripts": {
-    "start": "python serve.py",
-    "dev": "python serve.py",
-    "serve": "npx serve ."
+    "start": "node server.js",
+    "dev": "node server.js",
+    "serve": "python serve.py",
+    "test": "node tests/frontend.test.js"
   },
-  "keywords": ["digital-twin", "urbanverse", "fastapi", "leaflet", "threejs"],
+  "keywords": [
+    "urbanverse",
+    "digital-twin",
+    "flood-simulation",
+    "mangalore",
+    "react"
+  ],
   "author": "UrbanVerse Team",
-  "license": "MIT"
+  "license": "MIT",
+  "dependencies": {
+    "react": "^18.3.1",
+    "react-dom": "^18.3.1"
+  }
 }
