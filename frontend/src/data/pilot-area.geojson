@@ -1,0 +1,112 @@
+{
+  "type": "FeatureCollection",
+  "name": "UrbanVerse_Pilot_Area_Mangalore_Synthetic",
+  "description": "Fictional demonstration map for the UrbanVerse digital twin prototype near Mangalore. Boundaries and properties are synthetic and do not represent actual geographical or municipal features.",
+  "bbox": [74.8400, 12.8550, 74.8640, 12.8750],
+  "features": [
+    {
+      "type": "Feature",
+      "id": "UV001",
+      "bbox": [74.8400, 12.8650, 74.8520, 12.8750],
+      "properties": {
+        "zone_id": "UV001",
+        "zone_name": "Residential Zone",
+        "zone_type": "residential",
+        "data_type": "synthetic",
+        "description": "Fictional residential zone located in the northern inland sector of the Mangalore pilot demonstration area. Boundaries are synthetic demonstration data and do not represent actual geographical features.",
+        "pilot_area_id": "pilot-area-01",
+        "elevation_m": 24.0
+      },
+      "geometry": {
+        "type": "Polygon",
+        "coordinates": [
+          [
+            [74.8400, 12.8650],
+            [74.8520, 12.8650],
+            [74.8520, 12.8750],
+            [74.8400, 12.8750],
+            [74.8400, 12.8650]
+          ]
+        ]
+      }
+    },
+    {
+      "type": "Feature",
+      "id": "UV002",
+      "bbox": [74.8520, 12.8650, 74.8640, 12.8750],
+      "properties": {
+        "zone_id": "UV002",
+        "zone_name": "Commercial Zone",
+        "zone_type": "commercial",
+        "data_type": "synthetic",
+        "description": "Fictional commercial district located in the northeastern sector of the Mangalore pilot demonstration area. Boundaries are synthetic demonstration data and do not represent actual geographical features.",
+        "pilot_area_id": "pilot-area-01",
+        "elevation_m": 18.0
+      },
+      "geometry": {
+        "type": "Polygon",
+        "coordinates": [
+          [
+            [74.8520, 12.8650],
+            [74.8640, 12.8650],
+            [74.8640, 12.8750],
+            [74.8520, 12.8750],
+            [74.8520, 12.8650]
+          ]
+        ]
+      }
+    },
+    {
+      "type": "Feature",
+      "id": "UV003",
+      "bbox": [74.8520, 12.8550, 74.8640, 12.8650],
+      "properties": {
+        "zone_id": "UV003",
+        "zone_name": "Industrial Zone",
+        "zone_type": "industrial",
+        "data_type": "synthetic",
+        "description": "Fictional industrial zone located in the southeastern sector of the Mangalore pilot demonstration area. Boundaries are synthetic demonstration data and do not represent actual geographical features.",
+        "pilot_area_id": "pilot-area-01",
+        "elevation_m": 10.0
+      },
+      "geometry": {
+        "type": "Polygon",
+        "coordinates": [
+          [
+            [74.8520, 12.8550],
+            [74.8640, 12.8550],
+            [74.8640, 12.8650],
+            [74.8520, 12.8650],
+            [74.8520, 12.8550]
+          ]
+        ]
+      }
+    },
+    {
+      "type": "Feature",
+      "id": "UV004",
+      "bbox": [74.8400, 12.8550, 74.8520, 12.8650],
+      "properties": {
+        "zone_id": "UV004",
+        "zone_name": "Riverside Zone",
+        "zone_type": "riverside",
+        "data_type": "synthetic",
+        "description": "Fictional riverside zone located in the southwestern sector of the Mangalore pilot demonstration area adjacent to the synthetic river corridor. Boundaries are synthetic demonstration data and do not represent actual geographical features.",
+        "pilot_area_id": "pilot-area-01",
+        "elevation_m": 4.0
+      },
+      "geometry": {
+        "type": "Polygon",
+        "coordinates": [
+          [
+            [74.8400, 12.8550],
+            [74.8520, 12.8550],
+            [74.8520, 12.8650],
+            [74.8400, 12.8650],
+            [74.8400, 12.8550]
+          ]
+        ]
+      }
+    }
+  ]
+}
