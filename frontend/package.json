@@ -1,0 +1,14 @@
+{
+  "name": "urbanverse-frontend",
+  "version": "1.0.0",
+  "description": "UrbanVerse AI Urban Digital Twin Frontend (2D GIS + 3D Simulation)",
+  "main": "index.html",
+  "scripts": {
+    "start": "python serve.py",
+    "dev": "python serve.py",
+    "serve": "npx serve ."
+  },
+  "keywords": ["digital-twin", "urbanverse", "fastapi", "leaflet", "threejs"],
+  "author": "UrbanVerse Team",
+  "license": "MIT"
+}

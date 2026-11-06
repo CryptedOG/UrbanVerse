@@ -1,0 +1,781 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+  <meta charset="UTF-8">
+  <meta name="viewport" content="width=device-width, initial-scale=1.0">
+  <title>UrbanVerse — AI Urban Digital Twin (Mangalore Pilot)</title>
+  
+  <!-- Tailwind CSS CDN -->
+  <script src="https://cdn.tailwindcss.com"></script>
+  <!-- Leaflet CSS & JS -->
+  <link rel="stylesheet" href="https://unpkg.com/leaflet@1.9.4/dist/leaflet.css" />
+  <script src="https://unpkg.com/leaflet@1.9.4/dist/leaflet.js"></script>
+  <!-- Three.js for 3D Digital Twin View -->
+  <script src="https://cdnjs.cloudflare.com/ajax/libs/three.js/r128/three.min.js"></script>
+  <!-- OrbitControls for Three.js -->
+  <script src="https://cdn.jsdelivr.net/npm/three@0.128.0/examples/js/controls/OrbitControls.js"></script>
+  <!-- Lucide Icons -->
+  <script src="https://unpkg.com/lucide@latest"></script>
+
+  <style>
+    body { font-family: -apple-system, BlinkMacSystemFont, "Segoe UI", Roboto, Helvetica, Arial, sans-serif; }
+    #map-container { height: 100%; width: 100%; min-height: 520px; }
+    #three-container { height: 100%; width: 100%; min-height: 520px; display: none; }
+    .glass-card { background: rgba(15, 23, 42, 0.85); backdrop-filter: blur(12px); border: 1px solid rgba(255, 255, 255, 0.1); }
+    .slider-track::-webkit-slider-thumb { -webkit-appearance: none; appearance: none; width: 18px; height: 18px; border-radius: 50%; background: #38bdf8; cursor: pointer; }
+    /* Custom Leaflet Dark Mode styling */
+    .leaflet-layer, .leaflet-control-zoom-in, .leaflet-control-zoom-out, .leaflet-control-attribution { filter: invert(90%) hue-rotate(180deg) brightness(95%) contrast(90%); }
+    .leaflet-container { background: #0f172a; }
+  </style>
+</head>
+<body class="bg-slate-950 text-slate-100 min-h-screen flex flex-col">
+
+  <!-- TOP HEADER -->
+  <header class="bg-slate-900 border-b border-slate-800 px-6 py-3 flex flex-wrap items-center justify-between gap-4 sticky top-0 z-50">
+    <div class="flex items-center gap-3">
+      <div class="w-10 h-10 rounded-lg bg-gradient-to-tr from-cyan-500 to-blue-600 flex items-center justify-center shadow-lg shadow-cyan-500/20">
+        <i data-lucide="layers" class="w-6 h-6 text-white"></i>
+      </div>
+      <div>
+        <div class="flex items-center gap-2">
+          <h1 class="text-xl font-bold tracking-tight text-white">UrbanVerse</h1>
+          <span class="text-xs font-semibold px-2 py-0.5 rounded-full bg-cyan-500/20 text-cyan-300 border border-cyan-500/30">Digital Twin MVP</span>
+        </div>
+        <p class="text-xs text-slate-400">Mangalore Pilot Area Resilience & Multi-Hazard Simulator</p>
+      </div>
+    </div>
+
+    <!-- Status & 2D/3D Toggle -->
+    <div class="flex items-center gap-4">
+      <div id="backend-status-pill" class="flex items-center gap-2 px-3 py-1.5 rounded-full bg-slate-800 border border-slate-700 text-xs">
+        <span class="w-2.5 h-2.5 rounded-full bg-yellow-400 animate-pulse" id="backend-dot"></span>
+        <span id="backend-label" class="text-slate-300">Checking API...</span>
+      </div>
+
+      <!-- 2D / 3D Toggle Switch -->
+      <div class="flex bg-slate-800 p-1 rounded-lg border border-slate-700">
+        <button id="btn-view-2d" onclick="switchView('2d')" class="px-3 py-1 text-xs font-medium rounded-md bg-cyan-600 text-white transition flex items-center gap-1.5 shadow">
+          <i data-lucide="map" class="w-3.5 h-3.5"></i> 2D GIS Map
+        </button>
+        <button id="btn-view-3d" onclick="switchView('3d')" class="px-3 py-1 text-xs font-medium rounded-md text-slate-400 hover:text-white transition flex items-center gap-1.5">
+          <i data-lucide="box" class="w-3.5 h-3.5"></i> 3D Twin View
+        </button>
+      </div>
+    </div>
+  </header>
+
+  <!-- DISCLAIMER NOTICE -->
+  <div class="bg-amber-950/40 border-b border-amber-800/50 px-6 py-1.5 flex items-center justify-between text-xs text-amber-300">
+    <div class="flex items-center gap-2">
+      <i data-lucide="alert-triangle" class="w-4 h-4 flex-shrink-0 text-amber-400"></i>
+      <span><strong>Hackathon Prototype Notice:</strong> Simulation only; not a live emergency warning. Calibrated for Mangalore pilot demonstration.</span>
+    </div>
+    <span class="text-amber-400/70 font-mono hidden md:inline">API: http://127.0.0.1:8000</span>
+  </div>
+
+  <!-- MAIN DASHBOARD CONTENT -->
+  <main class="flex-1 grid grid-cols-1 lg:grid-cols-12 gap-4 p-4">
+
+    <!-- LEFT PANEL: SIMULATION & HAZARDS CONTROLS (3 Cols) -->
+    <aside class="lg:col-span-3 space-y-4">
+      <div class="glass-card rounded-xl p-4 space-y-4">
+        <div class="flex items-center justify-between">
+          <h2 class="font-bold text-sm text-slate-200 uppercase tracking-wider flex items-center gap-2">
+            <i data-lucide="sliders" class="w-4 h-4 text-cyan-400"></i> Scenario Controls
+          </h2>
+          <button onclick="resetInputs()" class="text-xs text-slate-400 hover:text-cyan-400 transition">Reset</button>
+        </div>
+
+        <!-- Rainfall Slider -->
+        <div class="space-y-2 bg-slate-900/60 p-3 rounded-lg border border-slate-800">
+          <div class="flex justify-between items-center text-xs">
+            <span class="font-medium text-slate-300 flex items-center gap-1.5">
+              <i data-lucide="cloud-rain" class="w-4 h-4 text-blue-400"></i> Rainfall
+            </span>
+            <span id="val-rainfall" class="font-bold font-mono text-cyan-400 text-sm">80 mm</span>
+          </div>
+          <input type="range" id="input-rainfall" min="0" max="200" value="80" step="5" class="w-full h-1.5 bg-slate-700 rounded-lg appearance-none cursor-pointer slider-track" oninput="onParamChange()">
+          <div class="flex justify-between text-[10px] text-slate-500 font-mono">
+            <span>0 mm</span>
+            <span class="cursor-pointer hover:text-cyan-400" onclick="setRainfall(35)">35 mm (Mod)</span>
+            <span class="cursor-pointer hover:text-cyan-400" onclick="setRainfall(80)">80 mm (Monsoon)</span>
+            <span class="cursor-pointer hover:text-cyan-400" onclick="setRainfall(160)">160 mm (Flash)</span>
+          </div>
+        </div>
+
+        <!-- Temperature Slider -->
+        <div class="space-y-2 bg-slate-900/60 p-3 rounded-lg border border-slate-800">
+          <div class="flex justify-between items-center text-xs">
+            <span class="font-medium text-slate-300 flex items-center gap-1.5">
+              <i data-lucide="thermometer" class="w-4 h-4 text-orange-400"></i> Ambient Heat
+            </span>
+            <span id="val-temp" class="font-bold font-mono text-orange-400 text-sm">36.5 °C</span>
+          </div>
+          <input type="range" id="input-temp" min="20" max="50" value="36.5" step="0.5" class="w-full h-1.5 bg-slate-700 rounded-lg appearance-none cursor-pointer slider-track" oninput="onParamChange()">
+        </div>
+
+        <!-- Air Quality Index Slider -->
+        <div class="space-y-2 bg-slate-900/60 p-3 rounded-lg border border-slate-800">
+          <div class="flex justify-between items-center text-xs">
+            <span class="font-medium text-slate-300 flex items-center gap-1.5">
+              <i data-lucide="wind" class="w-4 h-4 text-emerald-400"></i> Air Quality (AQI)
+            </span>
+            <span id="val-aqi" class="font-bold font-mono text-emerald-400 text-sm">165</span>
+          </div>
+          <input type="range" id="input-aqi" min="30" max="400" value="165" step="5" class="w-full h-1.5 bg-slate-700 rounded-lg appearance-none cursor-pointer slider-track" oninput="onParamChange()">
+        </div>
+
+        <!-- Soil Saturation (Landslide) Slider -->
+        <div class="space-y-2 bg-slate-900/60 p-3 rounded-lg border border-slate-800">
+          <div class="flex justify-between items-center text-xs">
+            <span class="font-medium text-slate-300 flex items-center gap-1.5">
+              <i data-lucide="mountain" class="w-4 h-4 text-amber-500"></i> Slope Moisture
+            </span>
+            <span id="val-saturation" class="font-bold font-mono text-amber-400 text-sm">55%</span>
+          </div>
+          <input type="range" id="input-saturation" min="0" max="1" value="0.55" step="0.05" class="w-full h-1.5 bg-slate-700 rounded-lg appearance-none cursor-pointer slider-track" oninput="onParamChange()">
+        </div>
+
+        <button onclick="runSimulation()" class="w-full py-2.5 rounded-lg bg-cyan-600 hover:bg-cyan-500 font-semibold text-xs tracking-wider uppercase text-white shadow-lg shadow-cyan-600/30 transition flex items-center justify-center gap-2">
+          <i data-lucide="play" class="w-4 h-4 fill-white"></i> Recompute Risk Model
+        </button>
+      </div>
+
+      <!-- QUICK STATS SUMMARY -->
+      <div class="glass-card rounded-xl p-4 space-y-3">
+        <h3 class="font-bold text-xs uppercase tracking-wider text-slate-400 flex items-center gap-1.5">
+          <i data-lucide="pie-chart" class="w-3.5 h-3.5 text-cyan-400"></i> Resilience Triage Status
+        </h3>
+        <div class="grid grid-cols-2 gap-2 text-center">
+          <div class="bg-red-950/40 border border-red-800/40 rounded-lg p-2.5">
+            <div id="stat-p1-count" class="text-xl font-bold text-red-400 font-mono">1</div>
+            <div class="text-[10px] uppercase font-semibold text-red-300">P1 Critical</div>
+          </div>
+          <div class="bg-orange-950/40 border border-orange-800/40 rounded-lg p-2.5">
+            <div id="stat-p2-count" class="text-xl font-bold text-orange-400 font-mono">2</div>
+            <div class="text-[10px] uppercase font-semibold text-orange-300">P2 High</div>
+          </div>
+          <div class="bg-yellow-950/40 border border-yellow-800/40 rounded-lg p-2.5">
+            <div id="stat-p3-count" class="text-xl font-bold text-yellow-400 font-mono">1</div>
+            <div class="text-[10px] uppercase font-semibold text-yellow-300">P3 Moderate</div>
+          </div>
+          <div class="bg-emerald-950/40 border border-emerald-800/40 rounded-lg p-2.5">
+            <div id="stat-p4-count" class="text-xl font-bold text-emerald-400 font-mono">0</div>
+            <div class="text-[10px] uppercase font-semibold text-emerald-300">P4 Low</div>
+          </div>
+        </div>
+        <div class="text-xs text-slate-400 pt-1 border-t border-slate-800 flex justify-between">
+          <span>Top Priority Sector:</span>
+          <span id="stat-top-zone" class="font-bold text-red-400">UV004 (Riverside)</span>
+        </div>
+      </div>
+    </aside>
+
+    <!-- CENTER PANEL: 2D GIS MAP / 3D DIGITAL TWIN (6 Cols) -->
+    <section class="lg:col-span-6 flex flex-col gap-4">
+      <div class="glass-card rounded-xl flex-1 flex flex-col overflow-hidden relative min-h-[520px]">
+        
+        <!-- View Toolbar / Overlay Info -->
+        <div class="absolute top-3 left-3 z-[1000] flex items-center gap-2 bg-slate-900/90 backdrop-blur px-3 py-1.5 rounded-lg border border-slate-700 text-xs shadow-lg">
+          <i data-lucide="navigation" class="w-3.5 h-3.5 text-cyan-400"></i>
+          <span id="view-mode-title" class="font-medium text-slate-200">2D GIS Spatial Map (EPSG:4326)</span>
+        </div>
+
+        <div class="absolute top-3 right-3 z-[1000] flex items-center gap-2 bg-slate-900/90 backdrop-blur px-3 py-1.5 rounded-lg border border-slate-700 text-[11px] shadow-lg">
+          <span class="inline-block w-2.5 h-2.5 rounded-full bg-red-500"></span> P1
+          <span class="inline-block w-2.5 h-2.5 rounded-full bg-orange-500 ml-1"></span> P2
+          <span class="inline-block w-2.5 h-2.5 rounded-full bg-yellow-500 ml-1"></span> P3
+          <span class="inline-block w-2.5 h-2.5 rounded-full bg-emerald-500 ml-1"></span> P4
+        </div>
+
+        <!-- 2D Leaflet Container -->
+        <div id="map-container"></div>
+
+        <!-- 3D Three.js Container -->
+        <div id="three-container"></div>
+
+        <!-- 3D View Helper Banner (shown when 3D is active) -->
+        <div id="three-hint" class="hidden absolute bottom-3 left-3 z-[1000] bg-slate-900/90 backdrop-blur px-3 py-1 rounded text-[11px] text-slate-400 border border-slate-700">
+          Left-click: Orbit | Right-click: Pan | Scroll: Zoom 3D Terrain
+        </div>
+      </div>
+
+      <!-- ZONE ASSET INSPECTOR MODAL/DRAWER -->
+      <div id="asset-inspector-card" class="glass-card rounded-xl p-4 transition-all">
+        <div class="flex items-center justify-between pb-2 border-b border-slate-800">
+          <div class="flex items-center gap-2">
+            <i data-lucide="landmark" class="w-4 h-4 text-cyan-400"></i>
+            <h3 id="inspector-zone-title" class="font-bold text-sm text-slate-200">Select a zone on map to inspect critical infrastructure</h3>
+          </div>
+          <span id="inspector-priority-badge" class="hidden px-2 py-0.5 rounded text-xs font-bold uppercase"></span>
+        </div>
+        <div id="inspector-assets-list" class="mt-3 grid grid-cols-1 md:grid-cols-3 gap-2 text-xs">
+          <p class="text-slate-500 col-span-3">Click on any colored zone polygon above to view its hospitals, drainage pumping stations, and electrical substations.</p>
+        </div>
+      </div>
+    </section>
+
+    <!-- RIGHT PANEL: RESILIENCE PRIORITIES & ADVISORIES (3 Cols) -->
+    <aside class="lg:col-span-3 space-y-4">
+      
+      <!-- P1-P4 RANKED ZONES LIST -->
+      <div class="glass-card rounded-xl p-4 space-y-3">
+        <div class="flex items-center justify-between">
+          <h2 class="font-bold text-sm text-slate-200 uppercase tracking-wider flex items-center gap-2">
+            <i data-lucide="shield-alert" class="w-4 h-4 text-red-400"></i> Zone Priorities
+          </h2>
+          <span class="text-[10px] text-slate-400 font-mono">Ranked by Composite Risk</span>
+        </div>
+
+        <div id="zone-priority-list" class="space-y-2.5 max-h-[340px] overflow-y-auto pr-1">
+          <!-- Populated dynamically via JS -->
+          <div class="p-3 rounded-lg bg-slate-900/60 border border-slate-800 animate-pulse text-xs text-slate-400">
+            Loading priority matrix...
+          </div>
+        </div>
+      </div>
+
+      <!-- CIVILIAN RESILIENCE & ADVISORY PANEL -->
+      <div class="glass-card rounded-xl p-4 space-y-3">
+        <h2 class="font-bold text-sm text-slate-200 uppercase tracking-wider flex items-center gap-2">
+          <i data-lucide="megaphone" class="w-4 h-4 text-amber-400"></i> Civilian Advisories
+        </h2>
+        <div id="advisory-container" class="space-y-2 text-xs">
+          <div class="p-2.5 rounded-lg bg-amber-950/30 border border-amber-800/40 text-amber-200 flex gap-2">
+            <i data-lucide="alert-circle" class="w-4 h-4 text-amber-400 flex-shrink-0 mt-0.5"></i>
+            <span id="advisory-text">Pre-positioning mobile dewatering pumps near Commercial Zone (UV002). Diverting traffic toward elevated ridge (UV001).</span>
+          </div>
+        </div>
+
+        <div class="pt-2 border-t border-slate-800 text-[11px] text-slate-400 space-y-1">
+          <div class="flex justify-between">
+            <span>Primary Evacuation Refuge:</span>
+            <span class="font-bold text-emerald-400">UV001 (Kadri Hills, 24m)</span>
+          </div>
+          <div class="flex justify-between">
+            <span>Critical Drainage Bottleneck:</span>
+            <span class="font-bold text-red-400">UV004 (Bunder Estuary, 4m)</span>
+          </div>
+        </div>
+      </div>
+
+    </aside>
+
+  </main>
+
+  <!-- JAVASCRIPT APPLICATION LOGIC -->
+  <script>
+    // Configuration
+    const API_BASE = "http://127.0.0.1:8000";
+    let currentView = "2d";
+    let map = null;
+    let zoneLayers = {};
+    let activeZoneData = [];
+    let priorityData = [];
+    let threeScene, threeCamera, threeRenderer, threeControls;
+    let threeBuildings = [];
+    let waterPlane;
+
+    // Fallback Mock Data in case backend is offline
+    const MOCK_ZONES = [
+      {
+        zone_id: "UV001",
+        name: "Residential Zone",
+        zone_type: "residential",
+        elevation_m: 24.0,
+        center: { latitude: 12.870, longitude: 74.846 },
+        polygon: [[74.840, 12.865], [74.852, 12.865], [74.852, 12.875], [74.840, 12.875], [74.840, 12.865]]
+      },
+      {
+        zone_id: "UV002",
+        name: "Commercial Zone",
+        zone_type: "commercial",
+        elevation_m: 18.0,
+        center: { latitude: 12.870, longitude: 74.858 },
+        polygon: [[74.852, 12.865], [74.864, 12.865], [74.864, 12.875], [74.852, 12.875], [74.852, 12.865]]
+      },
+      {
+        zone_id: "UV003",
+        name: "Industrial Zone",
+        zone_type: "industrial",
+        elevation_m: 10.0,
+        center: { latitude: 12.860, longitude: 74.858 },
+        polygon: [[74.852, 12.855], [74.864, 12.855], [74.864, 12.865], [74.852, 12.865], [74.852, 12.855]]
+      },
+      {
+        zone_id: "UV004",
+        name: "Riverside Zone",
+        zone_type: "riverside",
+        elevation_m: 4.0,
+        center: { latitude: 12.860, longitude: 74.846 },
+        polygon: [[74.840, 12.855], [74.852, 12.855], [74.852, 12.865], [74.840, 12.865], [74.840, 12.855]]
+      }
+    ];
+
+    // Priority color mapping
+    function getPriorityColor(priority) {
+      switch (priority) {
+        case "P1": return "#EF4444"; // Red
+        case "P2": return "#F97316"; // Orange
+        case "P3": return "#EAB308"; // Yellow
+        case "P4": return "#22C55E"; // Green
+        default: return "#64748B";
+      }
+    }
+
+    // Initialize 2D Leaflet Map
+    function init2DMap() {
+      if (map) return;
+      map = L.map("map-container", {
+        zoomControl: true,
+        attributionControl: false
+      }).setView([12.865, 74.852], 14);
+
+      L.tileLayer("https://{s}.tile.openstreetmap.org/{z}/{x}/{y}.png", {
+        maxZoom: 18,
+      }).addTo(map);
+    }
+
+    // Initialize 3D Three.js Digital Twin Scene
+    function init3DScene() {
+      const container = document.getElementById("three-container");
+      const width = container.clientWidth || 600;
+      const height = container.clientHeight || 520;
+
+      threeScene = new THREE.Scene();
+      threeScene.background = new THREE.Color(0x090d16);
+
+      threeCamera = new THREE.PerspectiveCamera(45, width / height, 0.1, 1000);
+      threeCamera.position.set(0, 50, 60);
+
+      threeRenderer = new THREE.WebGLRenderer({ antialias: true });
+      threeRenderer.setSize(width, height);
+      threeRenderer.shadowMap.enabled = true;
+      container.appendChild(threeRenderer.domElement);
+
+      threeControls = new THREE.OrbitControls(threeCamera, threeRenderer.domElement);
+      threeControls.enableDamping = true;
+      threeControls.dampingFactor = 0.05;
+      threeControls.maxPolarAngle = Math.PI / 2.1;
+
+      // Lights
+      const ambientLight = new THREE.AmbientLight(0xffffff, 0.6);
+      threeScene.add(ambientLight);
+
+      const dirLight = new THREE.DirectionalLight(0x38bdf8, 0.8);
+      dirLight.position.set(30, 60, 40);
+      threeScene.add(dirLight);
+
+      // Ground grid plane
+      const grid = new THREE.GridHelper(80, 20, 0x1e293b, 0x0f172a);
+      grid.position.y = -0.1;
+      threeScene.add(grid);
+
+      // Water Plane (dynamic elevation rise)
+      const waterGeo = new THREE.PlaneGeometry(80, 80);
+      const waterMat = new THREE.MeshStandardMaterial({
+        color: 0x0284c7,
+        transparent: true,
+        opacity: 0.65,
+        roughness: 0.1,
+      });
+      waterPlane = new THREE.Mesh(waterGeo, waterMat);
+      waterPlane.rotation.x = -Math.PI / 2;
+      waterPlane.position.y = 1.0;
+      threeScene.add(waterPlane);
+
+      // Render 3D zone representations
+      render3DZoneBlocks();
+
+      // Animation loop
+      function animate() {
+        requestAnimationFrame(animate);
+        threeControls.update();
+        threeRenderer.render(threeScene, threeCamera);
+      }
+      animate();
+
+      window.addEventListener("resize", () => {
+        if (!container) return;
+        const w = container.clientWidth;
+        const h = container.clientHeight;
+        threeCamera.aspect = w / h;
+        threeCamera.updateProjectionMatrix();
+        threeRenderer.setSize(w, h);
+      });
+    }
+
+    // Render 3D zone building representations
+    function render3DZoneBlocks() {
+      // Remove old blocks
+      threeBuildings.forEach(b => threeScene.remove(b));
+      threeBuildings = [];
+
+      const zonePositions = {
+        "UV001": { x: -16, z: -16, baseH: 24 }, // Residential (High)
+        "UV002": { x:  16, z: -16, baseH: 18 }, // Commercial
+        "UV003": { x:  16, z:  16, baseH: 10 }, // Industrial
+        "UV004": { x: -16, z:  16, baseH:  4 }, // Riverside (Low)
+      };
+
+      activeZoneData.forEach(zone => {
+        const pos = zonePositions[zone.zone_id] || { x: 0, z: 0, baseH: 10 };
+        const priority = getZonePriority(zone.zone_id);
+        const colorHex = parseInt(getPriorityColor(priority).replace("#", "0x"));
+
+        // Create cluster of 4 buildings per zone
+        for (let dx = -1; dx <= 1; dx += 2) {
+          for (let dz = -1; dz <= 1; dz += 2) {
+            const h = (pos.baseH * 0.4) + Math.random() * 3 + 4;
+            const geo = new THREE.BoxGeometry(6, h, 6);
+            const mat = new THREE.MeshStandardMaterial({
+              color: colorHex,
+              metalness: 0.2,
+              roughness: 0.5
+            });
+            const mesh = new THREE.Mesh(geo, mat);
+            mesh.position.set(pos.x + dx * 4.5, h / 2, pos.z + dz * 4.5);
+            threeScene.add(mesh);
+            threeBuildings.push(mesh);
+          }
+        }
+      });
+    }
+
+    // Helper: Lookup priority for zone
+    function getZonePriority(zone_id) {
+      const match = priorityData.find(p => p.zone_id === zone_id);
+      return match ? match.priority : "P3";
+    }
+
+    // Switch between 2D and 3D views
+    function switchView(mode) {
+      currentView = mode;
+      const mapEl = document.getElementById("map-container");
+      const threeEl = document.getElementById("three-container");
+      const btn2d = document.getElementById("btn-view-2d");
+      const btn3d = document.getElementById("btn-view-3d");
+      const title = document.getElementById("view-mode-title");
+      const hint = document.getElementById("three-hint");
+
+      if (mode === "2d") {
+        mapEl.style.display = "block";
+        threeEl.style.display = "none";
+        btn2d.className = "px-3 py-1 text-xs font-medium rounded-md bg-cyan-600 text-white transition flex items-center gap-1.5 shadow";
+        btn3d.className = "px-3 py-1 text-xs font-medium rounded-md text-slate-400 hover:text-white transition flex items-center gap-1.5";
+        title.innerText = "2D GIS Spatial Map (EPSG:4326)";
+        hint.classList.add("hidden");
+        if (map) map.invalidateSize();
+      } else {
+        mapEl.style.display = "none";
+        threeEl.style.display = "block";
+        btn3d.className = "px-3 py-1 text-xs font-medium rounded-md bg-cyan-600 text-white transition flex items-center gap-1.5 shadow";
+        btn2d.className = "px-3 py-1 text-xs font-medium rounded-md text-slate-400 hover:text-white transition flex items-center gap-1.5";
+        title.innerText = "3D Digital Twin (Terrain & Water Inundation)";
+        hint.classList.remove("hidden");
+        if (!threeScene) init3DScene();
+        render3DZoneBlocks();
+      }
+    }
+
+    // Check backend connection & initialize
+    async function checkBackendAndInit() {
+      const pill = document.getElementById("backend-status-pill");
+      const dot = document.getElementById("backend-dot");
+      const label = document.getElementById("backend-label");
+
+      try {
+        const res = await fetch(`${API_BASE}/api/health`, { method: "GET" });
+        if (res.ok) {
+          const data = await res.json();
+          dot.className = "w-2.5 h-2.5 rounded-full bg-emerald-400";
+          label.innerText = "Backend API: Online";
+          label.className = "text-emerald-300 font-semibold";
+          await loadZonesFromAPI();
+          await runSimulation();
+        } else {
+          throw new Error("Bad response");
+        }
+      } catch (err) {
+        console.warn("Backend offline or inaccessible. Using high-fidelity fallback mock data.", err);
+        dot.className = "w-2.5 h-2.5 rounded-full bg-amber-400";
+        label.innerText = "Mock Mode (API Offline)";
+        activeZoneData = MOCK_ZONES;
+        render2DPolygons(activeZoneData);
+        generateMockPriorities(80);
+      }
+    }
+
+    // Load zones from backend
+    async function loadZonesFromAPI() {
+      try {
+        const res = await fetch(`${API_BASE}/api/zones`);
+        const json = await res.json();
+        activeZoneData = json.zones || MOCK_ZONES;
+        render2DPolygons(activeZoneData);
+      } catch (e) {
+        activeZoneData = MOCK_ZONES;
+        render2DPolygons(activeZoneData);
+      }
+    }
+
+    // Draw polygons on Leaflet Map
+    function render2DPolygons(zones) {
+      // Clear existing layers
+      Object.values(zoneLayers).forEach(l => map.removeLayer(l));
+      zoneLayers = {};
+
+      zones.forEach(zone => {
+        const priority = getZonePriority(zone.zone_id);
+        const color = getPriorityColor(priority);
+
+        // Convert [lon, lat] GeoJSON to Leaflet [lat, lon]
+        const latLngs = zone.polygon.map(coord => [coord[1], coord[0]]);
+
+        const polygon = L.polygon(latLngs, {
+          color: color,
+          weight: 2.5,
+          fillColor: color,
+          fillOpacity: 0.45
+        }).addTo(map);
+
+        polygon.bindTooltip(`<strong>${zone.name} (${zone.zone_id})</strong><br>Elevation: ${zone.elevation_m}m | Priority: ${priority}`, {
+          sticky: true,
+          className: "bg-slate-900 text-slate-100 text-xs border border-slate-700 p-2 rounded"
+        });
+
+        polygon.on("click", () => inspectZone(zone.zone_id, zone.name, priority));
+
+        zoneLayers[zone.zone_id] = polygon;
+      });
+    }
+
+    // Update 2D polygon colors based on latest priorities
+    function updatePolygonColors() {
+      activeZoneData.forEach(zone => {
+        const priority = getZonePriority(zone.zone_id);
+        const color = getPriorityColor(priority);
+        const layer = zoneLayers[zone.zone_id];
+        if (layer) {
+          layer.setStyle({ color: color, fillColor: color });
+          layer.setTooltipContent(`<strong>${zone.name} (${zone.zone_id})</strong><br>Elevation: ${zone.elevation_m}m | Priority: ${priority}`);
+        }
+      });
+      if (threeScene) render3DZoneBlocks();
+    }
+
+    // Run Simulation
+    async function runSimulation() {
+      const rainfall = parseFloat(document.getElementById("input-rainfall").value);
+      const temp = parseFloat(document.getElementById("input-temp").value);
+      const aqi = parseFloat(document.getElementById("input-aqi").value);
+      const saturation = parseFloat(document.getElementById("input-saturation").value);
+
+      // Adjust 3D water height based on rainfall
+      if (waterPlane) {
+        waterPlane.position.y = Math.min(12, (rainfall / 200) * 12);
+      }
+
+      try {
+        // Call /api/priorities with query parameters
+        const url = `${API_BASE}/api/priorities?rainfall_mm=${rainfall}&temperature_c=${temp}&aqi=${aqi}&slope_saturation_index=${saturation}`;
+        const res = await fetch(url);
+        if (res.ok) {
+          const data = await res.json();
+          priorityData = data.priorities;
+          renderPriorityList(data.priorities, data.summary);
+          updatePolygonColors();
+          return;
+        }
+      } catch (e) {
+        console.warn("Using local calculation fallback:", e);
+      }
+
+      // Fallback local priority computation
+      generateMockPriorities(rainfall);
+    }
+
+    // Fallback priority calculation
+    function generateMockPriorities(rf) {
+      priorityData = [
+        {
+          zone_id: "UV004",
+          zone_name: "Riverside Zone",
+          priority: rf > 60 ? "P1" : "P2",
+          priority_label: rf > 60 ? "P1 — Critical" : "P2 — High",
+          composite_risk_score: Math.min(100, Math.round(40 + rf * 0.65)),
+          primary_hazard: "Urban Flooding",
+          action_required: "IMMEDIATE EVACUATION & DEWATERING: Deploy mobile storm pumps.",
+          overall_rank: 1
+        },
+        {
+          zone_id: "UV002",
+          zone_name: "Commercial Zone",
+          priority: rf > 100 ? "P1" : "P2",
+          priority_label: rf > 100 ? "P1 — Critical" : "P2 — High",
+          composite_risk_score: Math.min(100, Math.round(30 + rf * 0.45)),
+          primary_hazard: "Urban Heat Island",
+          action_required: "Pre-position pumps and issue pedestrian cooling advisories.",
+          overall_rank: 2
+        },
+        {
+          zone_id: "UV003",
+          zone_name: "Industrial Zone",
+          priority: rf > 120 ? "P1" : (rf > 50 ? "P2" : "P3"),
+          priority_label: "P2 — High",
+          composite_risk_score: Math.min(100, Math.round(25 + rf * 0.4)),
+          primary_hazard: "Air Pollution",
+          action_required: "Issue industrial emission throttling warnings.",
+          overall_rank: 3
+        },
+        {
+          zone_id: "UV001",
+          zone_name: "Residential Zone",
+          priority: rf > 140 ? "P2" : "P3",
+          priority_label: "P3 — Moderate",
+          composite_risk_score: Math.min(100, Math.round(15 + rf * 0.25)),
+          primary_hazard: "Slope Failure / Landslide",
+          action_required: "Monitor laterite cut slopes on Kadri ridge.",
+          overall_rank: 4
+        }
+      ];
+
+      renderPriorityList(priorityData, {
+        p1_critical_count: priorityData.filter(p => p.priority === "P1").length,
+        p2_high_count: priorityData.filter(p => p.priority === "P2").length,
+        p3_moderate_count: priorityData.filter(p => p.priority === "P3").length,
+        p4_low_count: priorityData.filter(p => p.priority === "P4").length,
+        top_priority_zone: "UV004"
+      });
+      updatePolygonColors();
+    }
+
+    // Render Priority Cards in Right Panel
+    function renderPriorityList(priorities, summary) {
+      const container = document.getElementById("zone-priority-list");
+      container.innerHTML = "";
+
+      // Update Top Counts
+      if (summary) {
+        document.getElementById("stat-p1-count").innerText = summary.p1_critical_count ?? summary.P1_critical_count ?? 0;
+        document.getElementById("stat-p2-count").innerText = summary.p2_high_count ?? summary.P2_high_count ?? 0;
+        document.getElementById("stat-p3-count").innerText = summary.p3_moderate_count ?? summary.P3_moderate_count ?? 0;
+        document.getElementById("stat-p4-count").innerText = summary.p4_low_count ?? summary.P4_low_count ?? 0;
+        document.getElementById("stat-top-zone").innerText = summary.top_priority_zone || summary.highest_priority_zone || "UV004";
+      }
+
+      priorities.forEach(p => {
+        const color = getPriorityColor(p.priority);
+        const card = document.createElement("div");
+        card.className = "p-3 rounded-lg bg-slate-900/80 border border-slate-800 hover:border-slate-700 transition cursor-pointer";
+        card.onclick = () => inspectZone(p.zone_id, p.zone_name, p.priority);
+
+        card.innerHTML = `
+          <div class="flex items-center justify-between">
+            <span class="font-bold text-xs text-white">${p.zone_name} <span class="text-[10px] text-slate-400 font-mono">(${p.zone_id})</span></span>
+            <span class="px-2 py-0.5 rounded text-[10px] font-bold text-white uppercase" style="background-color: ${color}">${p.priority_label || p.priority}</span>
+          </div>
+          <div class="mt-2 flex items-center justify-between text-xs">
+            <span class="text-slate-400">Hazard: <strong class="text-slate-200">${p.primary_hazard}</strong></span>
+            <span class="font-mono font-bold text-xs" style="color: ${color}">Risk: ${p.composite_risk_score}/100</span>
+          </div>
+          <div class="w-full bg-slate-800 h-1.5 rounded-full mt-2 overflow-hidden">
+            <div class="h-full rounded-full" style="width: ${p.composite_risk_score}%; background-color: ${color}"></div>
+          </div>
+        `;
+        container.appendChild(card);
+      });
+    }
+
+    // Inspect critical assets for a clicked zone
+    async function inspectZone(zoneId, zoneName, priority) {
+      const title = document.getElementById("inspector-zone-title");
+      const badge = document.getElementById("inspector-priority-badge");
+      const list = document.getElementById("inspector-assets-list");
+
+      title.innerText = `${zoneName} (${zoneId}) Critical Infrastructure`;
+      badge.classList.remove("hidden");
+      badge.innerText = priority || getZonePriority(zoneId);
+      badge.style.backgroundColor = getPriorityColor(priority || getZonePriority(zoneId));
+      badge.className = "px-2 py-0.5 rounded text-xs font-bold uppercase text-white";
+
+      list.innerHTML = `<div class="col-span-3 text-slate-400 animate-pulse">Loading assets from /api/zones/${zoneId}/assets...</div>`;
+
+      try {
+        const res = await fetch(`${API_BASE}/api/zones/${zoneId}/assets`);
+        if (res.ok) {
+          const data = await res.json();
+          renderAssets(data.assets);
+          return;
+        }
+      } catch (e) {}
+
+      // Fallback assets
+      const sampleAssets = [
+        { name: "Emergency Hospital & Trauma Center", type: "medical", criticality: "high", status: "operational" },
+        { name: "Stormwater Drainage Pumping Station", type: "drainage", criticality: "critical", status: "active" },
+        { name: "33kV Power Distribution Substation", type: "power", criticality: "high", status: "standby_backup" }
+      ];
+      renderAssets(sampleAssets);
+    }
+
+    function renderAssets(assets) {
+      const list = document.getElementById("inspector-assets-list");
+      list.innerHTML = "";
+      if (!assets || assets.length === 0) {
+        list.innerHTML = `<p class="col-span-3 text-slate-500">No critical assets recorded in this sector.</p>`;
+        return;
+      }
+      assets.forEach(a => {
+        const card = document.createElement("div");
+        card.className = "bg-slate-900/90 border border-slate-800 p-2.5 rounded-lg flex items-start gap-2";
+        const iconName = a.asset_type === "medical" ? "activity" : (a.asset_type === "power" ? "zap" : "droplets");
+        card.innerHTML = `
+          <i data-lucide="${iconName}" class="w-4 h-4 text-cyan-400 flex-shrink-0 mt-0.5"></i>
+          <div>
+            <div class="font-medium text-slate-200 text-xs">${a.name}</div>
+            <div class="text-[10px] text-slate-400 uppercase tracking-wider">${a.asset_type || a.type} • <span class="text-cyan-300 font-semibold">${a.criticality}</span></div>
+          </div>
+        `;
+        list.appendChild(card);
+      });
+      lucide.createIcons();
+    }
+
+    // UI Slider Input Handlers
+    function onParamChange() {
+      const rf = document.getElementById("input-rainfall").value;
+      const tp = document.getElementById("input-temp").value;
+      const aq = document.getElementById("input-aqi").value;
+      const st = Math.round(document.getElementById("input-saturation").value * 100);
+
+      document.getElementById("val-rainfall").innerText = `${rf} mm`;
+      document.getElementById("val-temp").innerText = `${tp} °C`;
+      document.getElementById("val-aqi").innerText = `${aq}`;
+      document.getElementById("val-saturation").innerText = `${st}%`;
+
+      runSimulation();
+    }
+
+    function setRainfall(val) {
+      document.getElementById("input-rainfall").value = val;
+      onParamChange();
+    }
+
+    function resetInputs() {
+      document.getElementById("input-rainfall").value = 80;
+      document.getElementById("input-temp").value = 36.5;
+      document.getElementById("input-aqi").value = 165;
+      document.getElementById("input-saturation").value = 0.55;
+      onParamChange();
+    }
+
+    // Bootstrapping
+    window.addEventListener("DOMContentLoaded", () => {
+      lucide.createIcons();
+      init2DMap();
+      checkBackendAndInit();
+    });
+  </script>
+</body>
+</html>

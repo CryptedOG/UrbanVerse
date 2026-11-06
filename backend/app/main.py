@@ -1,4 +1,6 @@
+import os
 from fastapi import FastAPI
+from fastapi.responses import FileResponse
 from fastapi.middleware.cors import CORSMiddleware
 from app.config import CORS_ORIGINS, SERVICE_NAME, SERVICE_VERSION, DISCLAIMER_TEXT
 
@@ -41,6 +43,17 @@ app.include_router(assess_router)
 app.include_router(data_sources_router)
 
 
+FRONTEND_INDEX = os.path.abspath(os.path.join(os.path.dirname(__file__), "..", "..", "frontend", "index.html"))
+
+
+@app.get("/app", include_in_schema=False)
+def serve_frontend_ui():
+    """Serve the UrbanVerse Frontend Web Application directly from FastAPI."""
+    if os.path.exists(FRONTEND_INDEX):
+        return FileResponse(FRONTEND_INDEX)
+    return {"message": "Frontend index.html not found"}
+
+
 @app.get("/", tags=["Root"])
 def root():
     """Welcome endpoint providing quick navigation links to all API endpoints and docs."""
@@ -49,6 +62,7 @@ def root():
         "service": SERVICE_NAME,
         "version": SERVICE_VERSION,
         "docs_url": "/docs",
+        "ui_app": "/app",
         "endpoints": {
             "health": "/api/health",
             "zones": "/api/zones",
