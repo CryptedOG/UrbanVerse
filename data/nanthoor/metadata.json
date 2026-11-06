@@ -1,0 +1,43 @@
+{
+    "project": "UrbanVerse",
+    "area": "Nanthoor, Mangaluru, Karnataka, India",
+    "data_retrieved": "2026-11-06",
+    "coordinate_reference_system": "EPSG:4326",
+    "boundary": {
+        "center_latitude": 12.88477,
+        "center_longitude": 74.86077,
+        "radius_metres": 500,
+        "type": "Approximate project-defined circular boundary"
+    },
+    "data_sources": {
+        "boundary": "Project-defined",
+        "buildings": "OpenStreetMap",
+        "roads": "OpenStreetMap",
+        "waterways": "OpenStreetMap Overpass API",
+        "elevation": "Global DEM Portal; exact dataset product to be verified"
+    },
+    "feature_counts": {
+        "buildings": 147,
+        "roads": 105,
+        "waterways": 0
+    },
+    "waterways_note": "No mapped waterways or natural water features found in the queried 500m radius. This does not confirm their physical absence.",
+    "elevation": {
+        "file": "elevation.tif",
+        "source_file": "elevation_source.tif",
+        "resolution": "1 arc-second, approximately 30m",
+        "minimum_metres": 0.0,
+        "maximum_metres": 78.05,
+        "mean_metres": 36.37,
+        "valid_pixels": 1122,
+        "width": 34,
+        "height": 33,
+        "crs": "EPSG:4326"
+    },
+    "limitations": [
+        "Boundary is approximate, not an official surveyed boundary.",
+        "OpenStreetMap data may be incomplete.",
+        "30m elevation data is too coarse for street-level flood modelling.",
+        "Exact DEM product and version must be verified."
+    ]
+}

@@ -1,0 +1,43 @@
+{
+    "project": "UrbanVerse",
+    "area": "Surathkal, Mangaluru, Karnataka, India",
+    "data_retrieved": "2026-11-06",
+    "crs": "EPSG:4326",
+    "boundary": {
+        "center_latitude": 12.9883383,
+        "center_longitude": 74.8022122,
+        "radius_metres": 500,
+        "reference": "Surathkal Market"
+    },
+    "data_sources": {
+        "boundary": "Project-defined",
+        "buildings": "OpenStreetMap",
+        "roads": "OpenStreetMap",
+        "waterways": "No waterways included in project dataset",
+        "elevation": "Global DEM Portal; exact product to be verified"
+    },
+    "feature_counts": {
+        "buildings": 32,
+        "roads": 88,
+        "waterways": 0
+    },
+    "elevation": {
+        "file": "elevation.tif",
+        "source_file": "elevation_source.tif",
+        "resolution": "Approximately 30m",
+        "minimum_metres": 0.0,
+        "maximum_metres": 38.42,
+        "mean_metres": 13.18,
+        "valid_pixels": 1155,
+        "width": 35,
+        "height": 33,
+        "crs": "EPSG:4326"
+    },
+    "limitations": [
+        "Boundary is approximate, not officially surveyed.",
+        "OpenStreetMap data may be incomplete.",
+        "No waterways included in this dataset.",
+        "30m elevation data is too coarse for street-level flood modelling.",
+        "Exact DEM product and version must be verified."
+    ]
+}
