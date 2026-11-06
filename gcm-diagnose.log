@@ -1,0 +1,184 @@
+﻿Diagnose log at 2026-11-05T18:13:36Z
+
+AppPath: D:\Git\ucrt64\bin\git-credential-manager.exe
+InstallDir: D:\Git\ucrt64\bin\
+Version: 2.9.1+6760f0ef069c994aa2bb1d703fb374986ee82a3e
+
+------------
+Diagnostic: Environment
+Skipped: False
+Success: True
+Exception: None
+Log:
+OSType: Windows
+OSVersion: 10.0 (build 22621)
+Reading environment variables... OK
+ Variables:
+SystemDrive=C:
+ProgramFiles(x86)=C:\Program Files (x86)
+MSYSTEM=UCRT64
+ProgramW6432=C:\Program Files
+PROCESSOR_IDENTIFIER=Intel64 Family 6 Model 60 Stepping 3, GenuineIntel
+TMP=C:\Users\ASHISH~1\AppData\Local\Temp
+PROCESSOR_ARCHITECTURE=AMD64
+DriverData=C:\Windows\System32\Drivers\DriverData
+Path=D:/Git/ucrt64/libexec/git-core;D:\Git\ucrt64\bin;D:\Git\usr\bin;C:\Users\ASHISH KOTTARI\bin;C:\Users\ASHISH KOTTARI\AppData\Roaming\Antigravity\bin;C:\Program Files\Common Files\Oracle\Java\javapath;C:\Windows\system32;C:\Windows;C:\Windows\System32\Wbem;C:\Windows\System32\WindowsPowerShell\v1.0\;C:\Windows\System32\OpenSSH\;D:\Git\cmd;C:\Users\ASHISH KOTTARI\AppData\Local\Programs\Python\Python311\Scripts\;C:\Users\ASHISH KOTTARI\AppData\Local\Programs\Python\Python311\;C:\Users\ASHISH KOTTARI\AppData\Local\Microsoft\WindowsApps;C:\Users\ASHISH KOTTARI\AppData\Local\Programs\Microsoft VS Code\bin;C:\Users\ASHISH KOTTARI\AppData\Local\GitHubDesktop\bin
+AGY_BROWSER_ACTIVE_PORT_FILE=C:\Users\ASHISH KOTTARI\AppData\Roaming\Antigravity\DevToolsActivePort
+PROCESSOR_REVISION=3c03
+TEMP=C:\Users\ASHISH~1\AppData\Local\Temp
+USERPROFILE=C:\Users\ASHISH KOTTARI
+LOGONSERVER=\\DESKTOP-RV28MG0
+TERM=xterm-256color
+USERNAME=ASHISH KOTTARI
+SystemRoot=C:\Windows
+AGY_BROWSER_WS_URL=ws://127.0.0.1:63879/devtools/browser/3e48d0d1-05ac-425d-af13-c4d4faa90839
+PLINK_PROTOCOL=ssh
+OneDrive=C:\Users\ASHISH KOTTARI\OneDrive
+CommonProgramFiles=C:\Program Files\Common Files
+ProgramData=C:\ProgramData
+LC_CTYPE=C.UTF-8
+HOMEPATH=\Users\ASHISH KOTTARI
+COMPUTERNAME=DESKTOP-RV28MG0
+ALLUSERSPROFILE=C:\ProgramData
+CommonProgramW6432=C:\Program Files\Common Files
+GIT_EXEC_PATH=D:/Git/ucrt64/libexec/git-core
+SESSIONNAME=Console
+CommonProgramFiles(x86)=C:\Program Files (x86)\Common Files
+HOMEDRIVE=C:
+windir=C:\Windows
+GIT_TRACE2_PARENT_SID=10110442-de64-4b18-a817-be87555af86e
+NUMBER_OF_PROCESSORS=4
+OS=Windows_NT
+EFC_4756=1
+ProgramFiles=C:\Program Files
+ComSpec=C:\Windows\system32\cmd.exe
+CHROME_DEVTOOLS_MCP_JS=C:\Users\ASHISH KOTTARI\AppData\Local\Programs\antigravity\resources\app.asar.unpacked\node_modules\chrome-devtools-mcp\build\src\bin\chrome-devtools-mcp.js
+PATHEXT=.COM;.EXE;.BAT;.CMD;.VBS;.VBE;.JS;.JSE;.WSF;.WSH;.MSC;.CPL
+HOME=C:\Users\ASHISH KOTTARI
+PSModulePath=C:\Users\ASHISH KOTTARI\OneDrive\Documents\WindowsPowerShell\Modules;C:\Program Files\WindowsPowerShell\Modules;C:\Windows\system32\WindowsPowerShell\v1.0\Modules
+TMPDIR=C:\Users\ASHISH~1\AppData\Local\Temp
+APPDATA=C:\Users\ASHISH KOTTARI\AppData\Roaming
+USERDOMAIN=DESKTOP-RV28MG0
+PROCESSOR_LEVEL=6
+LOCALAPPDATA=C:\Users\ASHISH KOTTARI\AppData\Local
+USERDOMAIN_ROAMINGPROFILE=DESKTOP-RV28MG0
+PUBLIC=C:\Users\Public
+
+
+------------
+Diagnostic: File system
+Skipped: False
+Success: True
+Exception: None
+Log:
+Temporary directory is 'C:\Users\ASHISH KOTTARI\AppData\Local\Temp\'...
+Checking basic file I/O...
+Writing to temporary file 'C:\Users\ASHISH KOTTARI\AppData\Local\Temp\f6964b738eef944237104238'... OK
+Reading from temporary file 'C:\Users\ASHISH KOTTARI\AppData\Local\Temp\f6964b738eef944237104238'... OK
+Deleting temporary file 'C:\Users\ASHISH KOTTARI\AppData\Local\Temp\f6964b738eef944237104238'... OK
+Testing IFileSystem instance...
+UserHomePath: C:\Users\ASHISH KOTTARI
+UserDataDirectoryPath: C:\Users\ASHISH KOTTARI\.gcm
+GetCurrentDirectory(): C:\Users\ASHISH KOTTARI\OneDrive\Documents\GitHub\UrbanVerse-Team\UrbanVerse
+
+------------
+Diagnostic: Networking
+Skipped: False
+Success: True
+Exception: None
+Log:
+Checking networking and HTTP stack...
+Creating HTTP client... OK
+IsNetworkAvailable: True
+Sending HEAD request to http://example.com... OK
+Sending HEAD request to https://example.com... OK
+Acquiring free TCP port... OK
+Testing local HTTP loopback connections...
+Creating new HTTP listener for http://localhost:55421/... OK
+Waiting for loopback connection... OK
+Writing response... OK
+Waiting for response data... OK
+Loopback connection data OK
+
+------------
+Diagnostic: Git
+Skipped: False
+Success: True
+Exception: None
+Log:
+Getting Git version... OK
+Git version is '2.56.0.windows.4'
+Locating current repository...Git repository at 'C:/Users/ASHISH KOTTARI/OneDrive/Documents/GitHub/UrbanVerse-Team/UrbanVerse/.git'
+ OK
+Listing all Git configuration... OK
+Git configuration:
+file:D:/Git/etc/gitconfig	diff.astextplain.textconv=astextplain
+file:D:/Git/etc/gitconfig	filter.lfs.clean=git-lfs clean -- %f
+file:D:/Git/etc/gitconfig	filter.lfs.smudge=git-lfs smudge -- %f
+file:D:/Git/etc/gitconfig	filter.lfs.process=git-lfs filter-process
+file:D:/Git/etc/gitconfig	filter.lfs.required=true
+file:D:/Git/etc/gitconfig	http.sslbackend=schannel
+file:D:/Git/etc/gitconfig	core.autocrlf=true
+file:D:/Git/etc/gitconfig	core.fscache=true
+file:D:/Git/etc/gitconfig	core.symlinks=false
+file:D:/Git/etc/gitconfig	pull.rebase=false
+file:D:/Git/etc/gitconfig	credential.helper=manager
+file:D:/Git/etc/gitconfig	credential.https://dev.azure.com.usehttppath=true
+file:D:/Git/etc/gitconfig	init.defaultbranch=main
+file:C:/Users/ASHISH KOTTARI/.gitconfig	filter.lfs.process=git-lfs filter-process
+file:C:/Users/ASHISH KOTTARI/.gitconfig	filter.lfs.required=true
+file:C:/Users/ASHISH KOTTARI/.gitconfig	filter.lfs.clean=git-lfs clean -- %f
+file:C:/Users/ASHISH KOTTARI/.gitconfig	filter.lfs.smudge=git-lfs smudge -- %f
+file:C:/Users/ASHISH KOTTARI/.gitconfig	user.name=shreyaskottary29-coder
+file:C:/Users/ASHISH KOTTARI/.gitconfig	user.email=shreyaskottary29@gmail.com
+file:C:/Users/ASHISH KOTTARI/.gitconfig	core.editor="C:\Users\ASHISH KOTTARI\AppData\Local\Programs\Microsoft VS Code\bin\code" --wait
+file:.git/config	core.repositoryformatversion=0
+file:.git/config	core.filemode=false
+file:.git/config	core.bare=false
+file:.git/config	core.logallrefupdates=true
+file:.git/config	core.symlinks=false
+file:.git/config	core.ignorecase=true
+file:.git/config	submodule.active=.
+file:.git/config	remote.origin.url=https://github.com/CryptedOG/UrbanVerse.git
+file:.git/config	remote.origin.fetch=+refs/heads/*:refs/remotes/origin/*
+file:.git/config	branch.main.remote=origin
+file:.git/config	branch.main.merge=refs/heads/main
+file:.git/config	lfs.repositoryformatversion=0
+file:.git/config	branch.simulation.remote=origin
+file:.git/config	branch.simulation.merge=refs/heads/simulation
+
+
+------------
+Diagnostic: Credential storage
+Skipped: False
+Success: True
+Exception: None
+Log:
+ICredentialStore instance is of type: CredentialStore
+Writing test credential... OK
+Reading test credential... OK
+Deleting test credential... OK
+
+------------
+Diagnostic: Microsoft authentication (AAD/MSA)
+Skipped: False
+Success: True
+Exception: None
+Log:
+Broker is not enabled.
+Gathering MSAL token cache data... OK
+CacheDirectory: C:\Users\ASHISH KOTTARI\AppData\Local\.IdentityService
+CacheFileName: msal.cache
+CacheFilePath: C:\Users\ASHISH KOTTARI\AppData\Local\.IdentityService\msal.cache
+Creating cache helper... OK
+Verifying MSAL token cache persistence... OK
+
+------------
+Diagnostic: GitHub API
+Skipped: False
+Success: True
+Exception: None
+Log:
+Using 'https://github.com/' as API target.
+Querying '/meta' endpoint... OK
+
