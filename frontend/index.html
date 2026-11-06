@@ -615,36 +615,49 @@
       });
     }
 
-    // Render 3D zone building representations
+    // Render 3D zone building representations with realistic terrain elevation platforms
     function render3DZoneBlocks() {
       // Remove old blocks
       threeBuildings.forEach(b => threeScene.remove(b));
       threeBuildings = [];
 
-      const zonePositions = {
-        "UV001": { x: -16, z: -16, baseH: 24 }, // Residential (High)
-        "UV002": { x:  16, z: -16, baseH: 18 }, // Commercial
-        "UV003": { x:  16, z:  16, baseH: 10 }, // Industrial
-        "UV004": { x: -16, z:  16, baseH:  4 }, // Riverside (Low)
+      const zoneElevations = {
+        "UV001": { x: -18, z: -18, elevY: 8.5, baseH: 24, name: "Kadri Ridge (24m)" },
+        "UV002": { x:  18, z: -18, elevY: 6.0, baseH: 18, name: "Commercial Core (18m)" },
+        "UV003": { x:  18, z:  18, elevY: 3.2, baseH: 10, name: "Industrial Corridor (10m)" },
+        "UV004": { x: -18, z:  18, elevY: 0.8, baseH:  4, name: "Bunder Estuary (4m)" },
       };
 
       activeZoneData.forEach(zone => {
-        const pos = zonePositions[zone.zone_id] || { x: 0, z: 0, baseH: 10 };
+        const info = zoneElevations[zone.zone_id] || { x: 0, z: 0, elevY: 2.0, baseH: 10, name: zone.name };
         const priority = getZonePriority(zone.zone_id);
         const colorHex = parseInt(getPriorityColor(priority).replace("#", "0x"));
 
-        // Create cluster of 4 buildings per zone
+        // 1. Terrain platform reflecting real elevation
+        const platGeo = new THREE.BoxGeometry(20, info.elevY, 20);
+        const platMat = new THREE.MeshStandardMaterial({
+          color: 0x1e293b,
+          roughness: 0.9,
+          metalness: 0.1
+        });
+        const platform = new THREE.Mesh(platGeo, platMat);
+        platform.position.set(info.x, info.elevY / 2, info.z);
+        threeScene.add(platform);
+        threeBuildings.push(platform);
+
+        // 2. Cluster of buildings on top of the terrain platform
         for (let dx = -1; dx <= 1; dx += 2) {
           for (let dz = -1; dz <= 1; dz += 2) {
-            const h = (pos.baseH * 0.4) + Math.random() * 3 + 4;
-            const geo = new THREE.BoxGeometry(6, h, 6);
+            const bHeight = 4.5 + Math.random() * 3.5;
+            const geo = new THREE.BoxGeometry(5.5, bHeight, 5.5);
             const mat = new THREE.MeshStandardMaterial({
               color: colorHex,
-              metalness: 0.2,
-              roughness: 0.5
+              metalness: 0.25,
+              roughness: 0.45
             });
             const mesh = new THREE.Mesh(geo, mat);
-            mesh.position.set(pos.x + dx * 4.5, h / 2, pos.z + dz * 4.5);
+            // Sits directly on top of the elevated terrain platform
+            mesh.position.set(info.x + dx * 5.0, info.elevY + (bHeight / 2), info.z + dz * 5.0);
             threeScene.add(mesh);
             threeBuildings.push(mesh);
           }
@@ -652,10 +665,10 @@
       });
     }
 
-    // Helper: Lookup priority for zone
+    // Helper: Lookup priority for zone (Defaults to P4 Low / Green if benign)
     function getZonePriority(zone_id) {
       const match = priorityData.find(p => p.zone_id === zone_id);
-      return match ? match.priority : "P3";
+      return match ? match.priority : "P4";
     }
 
     // Switch between 2D and 3D views
@@ -797,7 +810,8 @@
 
       // Adjust 3D water height based on rainfall
       if (waterPlane) {
-        waterPlane.position.y = Math.min(12, (rainfall / 200) * 12);
+        // At <=5mm: -1.0 (totally dry ground). At 160mm: 8.0 (flood reaches mid-level sectors)
+        waterPlane.position.y = (rainfall <= 5) ? -1.0 : -0.5 + ((rainfall / 160.0) * 8.0);
       }
 
       try {
@@ -880,47 +894,48 @@
       }, 3000);
     }
 
-    // Fallback priority calculation
+    // Fallback priority calculation (Supports P4 Low across benign conditions)
     function generateMockPriorities(rf) {
+      const isDry = rf <= 25;
       priorityData = [
         {
           zone_id: "UV004",
           zone_name: "Riverside Zone",
-          priority: rf > 60 ? "P1" : "P2",
-          priority_label: rf > 60 ? "P1 — Critical" : "P2 — High",
-          composite_risk_score: Math.min(100, Math.round(40 + rf * 0.65)),
-          primary_hazard: "Urban Flooding",
-          action_required: "IMMEDIATE EVACUATION & DEWATERING: Deploy mobile storm pumps.",
+          priority: isDry ? "P4" : (rf > 80 ? "P1" : (rf > 45 ? "P2" : "P3")),
+          priority_label: isDry ? "P4 — Low" : (rf > 80 ? "P1 — Critical" : (rf > 45 ? "P2 — High" : "P3 — Moderate")),
+          composite_risk_score: isDry ? 12 : Math.min(100, Math.round(25 + rf * 0.7)),
+          primary_hazard: isDry ? "Baseline Routine" : "Urban Flooding",
+          action_required: isDry ? "Standard municipal monitoring active." : "IMMEDIATE EVACUATION & DEWATERING: Deploy mobile storm pumps.",
           overall_rank: 1
         },
         {
           zone_id: "UV002",
           zone_name: "Commercial Zone",
-          priority: rf > 100 ? "P1" : "P2",
-          priority_label: rf > 100 ? "P1 — Critical" : "P2 — High",
-          composite_risk_score: Math.min(100, Math.round(30 + rf * 0.45)),
-          primary_hazard: "Urban Heat Island",
-          action_required: "Pre-position pumps and issue pedestrian cooling advisories.",
+          priority: isDry ? "P4" : (rf > 100 ? "P1" : (rf > 65 ? "P2" : "P3")),
+          priority_label: isDry ? "P4 — Low" : (rf > 100 ? "P1 — Critical" : (rf > 65 ? "P2 — High" : "P3 — Moderate")),
+          composite_risk_score: isDry ? 12 : Math.min(100, Math.round(20 + rf * 0.55)),
+          primary_hazard: isDry ? "Baseline Routine" : "Urban Heat Island",
+          action_required: isDry ? "Standard municipal monitoring active." : "Pre-position pumps and issue pedestrian cooling advisories.",
           overall_rank: 2
         },
         {
           zone_id: "UV003",
           zone_name: "Industrial Zone",
-          priority: rf > 120 ? "P1" : (rf > 50 ? "P2" : "P3"),
-          priority_label: "P2 — High",
-          composite_risk_score: Math.min(100, Math.round(25 + rf * 0.4)),
-          primary_hazard: "Air Pollution",
-          action_required: "Issue industrial emission throttling warnings.",
+          priority: isDry ? "P4" : (rf > 120 ? "P1" : (rf > 70 ? "P2" : "P3")),
+          priority_label: isDry ? "P4 — Low" : (rf > 120 ? "P1 — Critical" : (rf > 70 ? "P2 — High" : "P3 — Moderate")),
+          composite_risk_score: isDry ? 12 : Math.min(100, Math.round(18 + rf * 0.45)),
+          primary_hazard: isDry ? "Baseline Routine" : "Air Pollution",
+          action_required: isDry ? "Standard municipal monitoring active." : "Issue industrial emission throttling warnings.",
           overall_rank: 3
         },
         {
           zone_id: "UV001",
           zone_name: "Residential Zone",
-          priority: rf > 140 ? "P2" : "P3",
-          priority_label: "P3 — Moderate",
-          composite_risk_score: Math.min(100, Math.round(15 + rf * 0.25)),
-          primary_hazard: "Slope Failure / Landslide",
-          action_required: "Monitor laterite cut slopes on Kadri ridge.",
+          priority: isDry ? "P4" : (rf > 140 ? "P2" : (rf > 80 ? "P3" : "P4")),
+          priority_label: isDry ? "P4 — Low" : (rf > 140 ? "P2 — High" : (rf > 80 ? "P3 — Moderate" : "P4 — Low")),
+          composite_risk_score: isDry ? 10 : Math.min(100, Math.round(10 + rf * 0.3)),
+          primary_hazard: isDry ? "Baseline Routine" : "Slope Failure / Landslide",
+          action_required: isDry ? "Standard municipal monitoring active." : "Monitor laterite cut slopes on Kadri ridge.",
           overall_rank: 4
         }
       ];

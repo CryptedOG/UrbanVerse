@@ -109,9 +109,11 @@ def calculate_zone_multi_hazard(
     elev_penalty = max(0, int(round((30.0 - elev) * 1.5)))
     vulnerability_score = min(100, profile["vulnerability_base"] + elev_penalty)
 
-    # Composite Risk Formula (Transparent and explicit weighting):
-    # 50% Hazard Intensity + 30% Exposure + 20% Vulnerability
-    composite_risk_float = (max_hazard_score * 0.50) + (exposure_score * 0.30) + (vulnerability_score * 0.20)
+    # Composite Risk Formula (Hazard-Activated Multi-Criteria Evaluation):
+    # Under low/benign weather conditions, high exposure does not create an active emergency.
+    # Hazard intensity acts as the trigger/multiplier (up to full activation at hazard >= 60).
+    hazard_activation = min(1.0, max_hazard_score / 60.0) if max_hazard_score > 0 else 0.0
+    composite_risk_float = (max_hazard_score * 0.55) + (((exposure_score * 0.25) + (vulnerability_score * 0.20)) * hazard_activation)
     composite_risk_score = int(min(100, max(0, round(composite_risk_float))))
 
     # Priority Classification
