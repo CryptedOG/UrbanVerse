@@ -139,8 +139,9 @@
           <input type="range" id="input-saturation" min="0" max="1" value="0.55" step="0.05" class="w-full h-1.5 bg-slate-700 rounded-lg appearance-none cursor-pointer slider-track" oninput="onParamChange()">
         </div>
 
-        <button onclick="runSimulation()" class="w-full py-2.5 rounded-lg bg-cyan-600 hover:bg-cyan-500 font-semibold text-xs tracking-wider uppercase text-white shadow-lg shadow-cyan-600/30 transition flex items-center justify-center gap-2">
-          <i data-lucide="play" class="w-4 h-4 fill-white"></i> Recompute Risk Model
+        <button id="btn-recompute" onclick="runSimulation(true)" class="w-full py-2.5 rounded-lg bg-cyan-600 hover:bg-cyan-500 active:scale-95 font-semibold text-xs tracking-wider uppercase text-white shadow-lg shadow-cyan-600/30 transition-all flex items-center justify-center gap-2 cursor-pointer">
+          <i data-lucide="play" class="w-4 h-4 fill-white" id="btn-recompute-icon"></i>
+          <span id="btn-recompute-text">Recompute Risk Model</span>
         </button>
       </div>
 
@@ -274,6 +275,17 @@
     </aside>
 
   </main>
+
+  <!-- FLOATING TOAST NOTIFICATION -->
+  <div id="toast-notify" class="fixed bottom-6 right-6 z-[2000] hidden flex items-center gap-3 bg-slate-900/95 border border-emerald-500/50 text-white px-4 py-3 rounded-xl shadow-2xl backdrop-blur transition-all duration-300">
+    <div class="w-7 h-7 rounded-full bg-emerald-500/20 text-emerald-400 flex items-center justify-center font-bold">
+      ✓
+    </div>
+    <div>
+      <div class="text-xs font-bold text-slate-100" id="toast-title">Risk Model Recomputed</div>
+      <div class="text-[11px] text-slate-400" id="toast-desc">4 zones evaluated across Flood, Heat, AQI & Landslide.</div>
+    </div>
+  </div>
 
   <!-- JAVASCRIPT APPLICATION LOGIC -->
   <script>
@@ -709,12 +721,26 @@
       if (threeScene) render3DZoneBlocks();
     }
 
-    // Run Simulation
-    async function runSimulation() {
+    // Run Simulation & Multi-Hazard Recomputation
+    async function runSimulation(isButtonClicked = false) {
       const rainfall = parseFloat(document.getElementById("input-rainfall").value);
       const temp = parseFloat(document.getElementById("input-temp").value);
       const aqi = parseFloat(document.getElementById("input-aqi").value);
       const saturation = parseFloat(document.getElementById("input-saturation").value);
+
+      const btn = document.getElementById("btn-recompute");
+
+      if (isButtonClicked && btn) {
+        btn.disabled = true;
+        btn.className = "w-full py-2.5 rounded-lg bg-cyan-700 font-semibold text-xs tracking-wider uppercase text-white shadow-lg transition-all flex items-center justify-center gap-2 cursor-wait opacity-90";
+        btn.innerHTML = `
+          <svg class="animate-spin h-4 w-4 text-white inline-block" xmlns="http://www.w3.org/2000/svg" fill="none" viewBox="0 0 24 24">
+            <circle class="opacity-25" cx="12" cy="12" r="10" stroke="currentColor" stroke-width="4"></circle>
+            <path class="opacity-75" fill="currentColor" d="M4 12a8 8 0 018-8V0C5.373 0 0 5.373 0 12h4zm2 5.291A7.962 7.962 0 014 12H0c0 3.042 1.135 5.824 3 7.938l3-2.647z"></path>
+          </svg>
+          <span>Computing Multi-Hazard Model...</span>
+        `;
+      }
 
       // Adjust 3D water height based on rainfall
       if (waterPlane) {
@@ -722,14 +748,39 @@
       }
 
       try {
-        // Call /api/priorities with query parameters
+        // 1. Call /api/priorities with all multi-hazard parameters
         const url = `${API_BASE}/api/priorities?rainfall_mm=${rainfall}&temperature_c=${temp}&aqi=${aqi}&slope_saturation_index=${saturation}`;
         const res = await fetch(url);
+        
+        // 2. Also call /api/simulate to fetch dynamic civilian evacuation advisories
+        const simRes = await fetch(`${API_BASE}/api/simulate`, {
+          method: "POST",
+          headers: { "Content-Type": "application/json" },
+          body: JSON.stringify({ rainfall_mm: rainfall })
+        });
+
         if (res.ok) {
           const data = await res.json();
           priorityData = data.priorities;
           renderPriorityList(data.priorities, data.summary);
           updatePolygonColors();
+
+          if (simRes.ok) {
+            const simData = await simRes.json();
+            updateCivilianAdvisories(simData.recommendations);
+          }
+
+          if (isButtonClicked && btn) {
+            btn.className = "w-full py-2.5 rounded-lg bg-emerald-600 hover:bg-emerald-500 font-semibold text-xs tracking-wider uppercase text-white shadow-lg shadow-emerald-600/30 transition-all flex items-center justify-center gap-2";
+            btn.innerHTML = `<span>✓ Model Recomputed (${priorityData.length} Zones)</span>`;
+            showToast("Risk Model Recomputed", `Evaluated ${rainfall}mm rain, ${temp}°C heat, AQI ${aqi}.`);
+            setTimeout(() => {
+              btn.disabled = false;
+              btn.className = "w-full py-2.5 rounded-lg bg-cyan-600 hover:bg-cyan-500 active:scale-95 font-semibold text-xs tracking-wider uppercase text-white shadow-lg shadow-cyan-600/30 transition-all flex items-center justify-center gap-2 cursor-pointer";
+              btn.innerHTML = `<i data-lucide="play" class="w-4 h-4 fill-white" id="btn-recompute-icon"></i><span id="btn-recompute-text">Recompute Risk Model</span>`;
+              lucide.createIcons();
+            }, 2000);
+          }
           return;
         }
       } catch (e) {
@@ -738,6 +789,42 @@
 
       // Fallback local priority computation
       generateMockPriorities(rainfall);
+      if (isButtonClicked && btn) {
+        btn.className = "w-full py-2.5 rounded-lg bg-emerald-600 font-semibold text-xs tracking-wider uppercase text-white shadow-lg transition-all flex items-center justify-center gap-2";
+        btn.innerHTML = `<span>✓ Model Updated (Local Mode)</span>`;
+        showToast("Model Updated", `Simulated at ${rainfall}mm rainfall.`);
+        setTimeout(() => {
+          btn.disabled = false;
+          btn.className = "w-full py-2.5 rounded-lg bg-cyan-600 hover:bg-cyan-500 font-semibold text-xs tracking-wider uppercase text-white shadow-lg transition-all flex items-center justify-center gap-2 cursor-pointer";
+          btn.innerHTML = `<i data-lucide="play" class="w-4 h-4 fill-white" id="btn-recompute-icon"></i><span id="btn-recompute-text">Recompute Risk Model</span>`;
+          lucide.createIcons();
+        }, 2000);
+      }
+    }
+
+    // Dynamic Civilian Advisories updater
+    function updateCivilianAdvisories(recs) {
+      const container = document.getElementById("advisory-container");
+      if (!container || !recs || recs.length === 0) return;
+      container.innerHTML = recs.map(r => `
+        <div class="p-2.5 rounded-lg bg-amber-950/30 border border-amber-800/40 text-amber-200 flex gap-2">
+          <i data-lucide="alert-circle" class="w-4 h-4 text-amber-400 flex-shrink-0 mt-0.5"></i>
+          <span>${r}</span>
+        </div>
+      `).join("");
+      lucide.createIcons();
+    }
+
+    // Toast notification helper
+    function showToast(title, desc) {
+      const toast = document.getElementById("toast-notify");
+      if (!toast) return;
+      document.getElementById("toast-title").innerText = title;
+      document.getElementById("toast-desc").innerText = desc;
+      toast.classList.remove("hidden");
+      setTimeout(() => {
+        toast.classList.add("hidden");
+      }, 3000);
     }
 
     // Fallback priority calculation
