@@ -65,12 +65,15 @@
   </header>
 
   <!-- DISCLAIMER NOTICE -->
-  <div class="bg-amber-950/40 border-b border-amber-800/50 px-6 py-1.5 flex items-center justify-between text-xs text-amber-300">
+  <div id="disclaimer-banner" class="bg-amber-950/40 border-b border-amber-800/50 px-6 py-1.5 flex items-center justify-between text-xs text-amber-300 transition-all">
     <div class="flex items-center gap-2">
       <i data-lucide="alert-triangle" class="w-4 h-4 flex-shrink-0 text-amber-400"></i>
       <span><strong>Hackathon Prototype Notice:</strong> Simulation only; not a live emergency warning. Calibrated for Mangalore pilot demonstration.</span>
     </div>
-    <span class="text-amber-400/70 font-mono hidden md:inline">API: http://127.0.0.1:8000</span>
+    <div class="flex items-center gap-3">
+      <span class="text-amber-400/70 font-mono hidden md:inline">API: http://127.0.0.1:8000</span>
+      <button onclick="document.getElementById('disclaimer-banner').remove()" class="text-amber-400/80 hover:text-amber-200 transition font-bold px-1.5 py-0.5 rounded hover:bg-amber-900/40" title="Dismiss notice">✕</button>
+    </div>
   </div>
 
   <!-- MAIN DASHBOARD CONTENT -->
@@ -198,6 +201,15 @@
         <div id="three-hint" class="hidden absolute bottom-3 left-3 z-[1000] bg-slate-900/90 backdrop-blur px-3 py-1 rounded text-[11px] text-slate-400 border border-slate-700">
           Left-click: Orbit | Right-click: Pan | Scroll: Zoom 3D Terrain
         </div>
+
+        <!-- Location Switcher Quick Bar -->
+        <div class="absolute bottom-4 left-1/2 -translate-x-1/2 z-[1000] flex items-center gap-1.5 bg-slate-900/95 backdrop-blur px-3 py-1.5 rounded-full border border-slate-700 text-xs shadow-2xl">
+          <span class="text-slate-400 font-semibold mr-1 flex items-center gap-1"><i data-lucide="map-pin" class="w-3.5 h-3.5 text-cyan-400"></i> Hotspots:</span>
+          <button onclick="flyToLocation('pilot')" id="btn-loc-pilot" class="px-2.5 py-1 rounded-full bg-cyan-600 text-white font-medium hover:bg-cyan-500 transition text-[11px]">Pilot 4-Zones</button>
+          <button onclick="flyToLocation('pumpwell')" id="btn-loc-pumpwell" class="px-2.5 py-1 rounded-full bg-slate-800 text-slate-200 hover:text-white hover:bg-slate-700 transition text-[11px] flex items-center gap-1"><span class="w-1.5 h-1.5 rounded-full bg-red-400"></span> Pumpwell (Flood)</button>
+          <button onclick="flyToLocation('nanthoor')" id="btn-loc-nanthoor" class="px-2.5 py-1 rounded-full bg-slate-800 text-slate-200 hover:text-white hover:bg-slate-700 transition text-[11px] flex items-center gap-1"><span class="w-1.5 h-1.5 rounded-full bg-amber-400"></span> Nanthoor (Ridge)</button>
+          <button onclick="flyToLocation('surathkal')" id="btn-loc-surathkal" class="px-2.5 py-1 rounded-full bg-slate-800 text-slate-200 hover:text-white hover:bg-slate-700 transition text-[11px] flex items-center gap-1"><span class="w-1.5 h-1.5 rounded-full bg-blue-400"></span> Surathkal (Coast)</button>
+        </div>
       </div>
 
       <!-- ZONE ASSET INSPECTOR MODAL/DRAWER -->
@@ -323,6 +335,39 @@
       }
     }
 
+    // Hotspots configuration for Mangalore
+    const HOTSPOTS = {
+      pilot: {
+        name: "Pilot 4-Zones Area",
+        center: [12.865, 74.852],
+        zoom: 14,
+        desc: "Core demonstration area: Kadri, Hampankatta, Baikampady, Bunder."
+      },
+      pumpwell: {
+        name: "Pumpwell (Mahaveer Circle)",
+        center: [12.8642, 74.8694],
+        zoom: 16,
+        color: "#EF4444",
+        desc: "Infamous low-lying monsoon flood bottleneck (12m elevation). Real OpenStreetMap data: 22 buildings, 78 roads, 5 waterways, 30m DEM raster."
+      },
+      nanthoor: {
+        name: "Nanthoor Highway Ridge",
+        center: [12.8848, 74.8608],
+        zoom: 16,
+        color: "#F59E0B",
+        desc: "Elevated transit corridor (36m–78m elevation). Safe evacuation ridge. Real OpenStreetMap data: 147 buildings, 105 roads."
+      },
+      surathkal: {
+        name: "Surathkal Coastal Suburb",
+        center: [12.9883, 74.8022],
+        zoom: 15,
+        color: "#06B6D4",
+        desc: "Northern maritime and industrial hub (13m elevation). Real OpenStreetMap data: 32 buildings, 88 roads."
+      }
+    };
+
+    let hotspotMarkers = {};
+
     // Initialize 2D Leaflet Map
     function init2DMap() {
       if (map) return;
@@ -334,6 +379,106 @@
       L.tileLayer("https://{s}.tile.openstreetmap.org/{z}/{x}/{y}.png", {
         maxZoom: 18,
       }).addTo(map);
+
+      initHotspots();
+    }
+
+    // Add Pumpwell, Nanthoor, and Surathkal hotspot markers and 500m study circles
+    function initHotspots() {
+      // 1. Pumpwell
+      const pwCircle = L.circle([12.8642, 74.8694], {
+        radius: 500,
+        color: "#EF4444",
+        weight: 2,
+        fillColor: "#EF4444",
+        fillOpacity: 0.15,
+        dashArray: "4, 6"
+      }).addTo(map);
+      pwCircle.bindPopup(`<strong>🌊 Pumpwell Hotspot (500m Study Area)</strong><br>Elevation: 12.0m | Status: P1 Flood Bottleneck<br><span class="text-cyan-400 font-mono text-[10px]">Real OpenStreetMap Layers Ingested</span>`);
+      
+      const pwMarker = L.marker([12.8642, 74.8694]).addTo(map);
+      pwMarker.bindTooltip("<strong>🌊 Pumpwell (Flood Bottleneck)</strong>", { permanent: false, direction: "top" });
+      pwMarker.on("click", () => flyToLocation("pumpwell"));
+
+      // 2. Nanthoor
+      const ntCircle = L.circle([12.8848, 74.8608], {
+        radius: 500,
+        color: "#F59E0B",
+        weight: 2,
+        fillColor: "#F59E0B",
+        fillOpacity: 0.15,
+        dashArray: "4, 6"
+      }).addTo(map);
+      ntCircle.bindPopup(`<strong>⛰️ Nanthoor Junction (500m Study Area)</strong><br>Elevation: 36.4m (Max 78m) | Status: Evacuation Ridge<br><span class="text-cyan-400 font-mono text-[10px]">Real OpenStreetMap Layers Ingested</span>`);
+      
+      const ntMarker = L.marker([12.8848, 74.8608]).addTo(map);
+      ntMarker.bindTooltip("<strong>⛰️ Nanthoor (Safe Ridge)</strong>", { permanent: false, direction: "top" });
+      ntMarker.on("click", () => flyToLocation("nanthoor"));
+
+      // 3. Surathkal
+      const stCircle = L.circle([12.9883, 74.8022], {
+        radius: 500,
+        color: "#06B6D4",
+        weight: 2,
+        fillColor: "#06B6D4",
+        fillOpacity: 0.15,
+        dashArray: "4, 6"
+      }).addTo(map);
+      stCircle.bindPopup(`<strong>🏖️ Surathkal Coastal Suburb (500m Study Area)</strong><br>Elevation: 13.2m | Status: Coastal Surge / Industrial<br><span class="text-cyan-400 font-mono text-[10px]">Real OpenStreetMap Layers Ingested</span>`);
+      
+      const stMarker = L.marker([12.9883, 74.8022]).addTo(map);
+      stMarker.bindTooltip("<strong>🏖️ Surathkal (Coast)</strong>", { permanent: false, direction: "top" });
+      stMarker.on("click", () => flyToLocation("surathkal"));
+    }
+
+    // Smooth camera navigation to Mangalore hotspots
+    function flyToLocation(key) {
+      const loc = HOTSPOTS[key];
+      if (!loc || !map) return;
+
+      ['pilot', 'pumpwell', 'nanthoor', 'surathkal'].forEach(k => {
+        const btn = document.getElementById(`btn-loc-${k}`);
+        if (btn) {
+          if (k === key) {
+            btn.className = "px-2.5 py-1 rounded-full bg-cyan-600 text-white font-medium shadow text-[11px] flex items-center gap-1";
+          } else {
+            btn.className = "px-2.5 py-1 rounded-full bg-slate-800 text-slate-300 hover:text-white hover:bg-slate-700 transition text-[11px] flex items-center gap-1";
+          }
+        }
+      });
+
+      map.flyTo(loc.center, loc.zoom, { duration: 1.2 });
+
+      const title = document.getElementById("inspector-zone-title");
+      const badge = document.getElementById("inspector-priority-badge");
+      const list = document.getElementById("inspector-assets-list");
+
+      title.innerHTML = `<span>${loc.name}</span> <span class="text-xs font-normal text-slate-400">(${loc.center[0].toFixed(4)}°N, ${loc.center[1].toFixed(4)}°E)</span>`;
+      badge.classList.remove("hidden");
+      badge.innerText = key === 'pumpwell' ? "P1 Critical Bottleneck" : (key === 'nanthoor' ? "Evacuation Ridge" : (key === 'surathkal' ? "Coastal Sector" : "Pilot 4-Zones"));
+      badge.style.backgroundColor = loc.color || "#0284c7";
+
+      if (key === 'pumpwell') {
+        list.innerHTML = `
+          <div class="bg-slate-900 border border-slate-800 p-2.5 rounded-lg"><div class="font-bold text-red-400">Raja Kaluve Storm Canal</div><div class="text-[10px] text-slate-400">Severe siltation; backflow hazard during high tide</div></div>
+          <div class="bg-slate-900 border border-slate-800 p-2.5 rounded-lg"><div class="font-bold text-slate-200">Pumpwell Flyover Underpass</div><div class="text-[10px] text-slate-400">NH-66 / NH-73 junction; 12m elevation inundation zone</div></div>
+          <div class="bg-slate-900 border border-slate-800 p-2.5 rounded-lg"><div class="font-bold text-cyan-300">OpenStreetMap Verified</div><div class="text-[10px] text-slate-400">22 buildings, 78 road segments, 30m DEM raster</div></div>
+        `;
+      } else if (key === 'nanthoor') {
+        list.innerHTML = `
+          <div class="bg-slate-900 border border-slate-800 p-2.5 rounded-lg"><div class="font-bold text-amber-400">Kadri-Nanthoor Laterite Ridge</div><div class="text-[10px] text-slate-400">Elevation 36.4m to 78m; flood-safe refuge point</div></div>
+          <div class="bg-slate-900 border border-slate-800 p-2.5 rounded-lg"><div class="font-bold text-slate-200">NH-66 Heavy Transit Corridor</div><div class="text-[10px] text-slate-400">High vehicle emissions; slope cutting stability required</div></div>
+          <div class="bg-slate-900 border border-slate-800 p-2.5 rounded-lg"><div class="font-bold text-cyan-300">OpenStreetMap Verified</div><div class="text-[10px] text-slate-400">147 buildings, 105 road segments, 30m DEM raster</div></div>
+        `;
+      } else if (key === 'surathkal') {
+        list.innerHTML = `
+          <div class="bg-slate-900 border border-slate-800 p-2.5 rounded-lg"><div class="font-bold text-cyan-400">Surathkal Coastal Market Hub</div><div class="text-[10px] text-slate-400">Arabian Sea proximity; storm surge & tide vulnerability</div></div>
+          <div class="bg-slate-900 border border-slate-800 p-2.5 rounded-lg"><div class="font-bold text-slate-200">NITK / Baikampady Logistics</div><div class="text-[10px] text-slate-400">Industrial chemical & freight transport link</div></div>
+          <div class="bg-slate-900 border border-slate-800 p-2.5 rounded-lg"><div class="font-bold text-cyan-300">OpenStreetMap Verified</div><div class="text-[10px] text-slate-400">32 buildings, 88 road segments, 30m DEM raster</div></div>
+        `;
+      } else {
+        list.innerHTML = `<p class="col-span-3 text-slate-400">Click on any of the 4 pilot polygons above to inspect their critical infrastructure.</p>`;
+      }
     }
 
     // Initialize 3D Three.js Digital Twin Scene
